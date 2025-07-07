@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query as FastAPIQuery
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional, Any
@@ -13,6 +13,8 @@ from app.models.user import User
 from app.models.query import Query
 from app.core.security import get_current_user
 from app.config import settings
+from app.crawlers.kenya_law_crawler import KenyaLawCrawler
+from app.crawlers.parliament_crawler import ParliamentCrawler
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -245,6 +247,50 @@ async def submit_query_feedback(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error submitting feedback"
+        )
+
+@router.get("/fetch-law")
+async def fetch_legal_resources(
+    query: str = FastAPIQuery(..., description="Search query for legal resources"),
+    source: str = FastAPIQuery("all", description="Source to search: kenya_law, parliament, or all"),
+    limit: int = FastAPIQuery(10, ge=1, le=50, description="Maximum number of results"),
+    current_user: User = Depends(get_current_user)
+):
+    """Fetch legal resources from Kenya Law and Parliament websites"""
+    try:
+        results = []
+        
+        # Initialize crawlers based on source
+        if source in ["kenya_law", "all"]:
+            kenya_crawler = KenyaLawCrawler()
+            kenya_results = await kenya_crawler.search_documents(query, limit=limit)
+            results.extend(kenya_results)
+            await kenya_crawler.close()
+            
+        if source in ["parliament", "all"]:
+            parliament_crawler = ParliamentCrawler()
+            parliament_results = await parliament_crawler.search_documents(query, limit=limit)
+            results.extend(parliament_results)
+            await parliament_crawler.close()
+        
+        # Sort by relevance if available
+        results.sort(key=lambda x: x.get('relevance_score', 0), reverse=True)
+        
+        # Limit to requested number
+        results = results[:limit]
+        
+        return {
+            "query": query,
+            "source": source,
+            "total_results": len(results),
+            "results": results
+        }
+        
+    except Exception as e:
+        logger.error(f"Error fetching legal resources: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error fetching legal resources: {str(e)}"
         )
 
 @router.get("/history")

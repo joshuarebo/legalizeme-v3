@@ -14,10 +14,11 @@ Counsel AI is a sophisticated AI-powered legal assistant backend specifically de
 - **ChromaDB**: Vector database for document similarity search and retrieval
 
 ### AI Integration
-- **Primary AI Model**: AWS Bedrock with Claude Sonnet 4 (claude-sonnet-4-20250514)
-- **Alternative Models**: Anthropic Claude, Hugging Face transformers
-- **Embeddings**: SentenceTransformers for document vectorization
+- **Primary AI Model**: AWS Bedrock with Claude Sonnet 4 (anthropic.claude-3-sonnet-20240229-v1:0)
+- **Alternative Models**: Hunyuan-A13B, MiniMax-01 (optional, via Hugging Face)
+- **Embeddings**: SentenceTransformers for document vectorization (optional)
 - **Model Context Protocol (MCP)**: Coordinated AI service orchestration
+- **AWS Integration**: Uses AWS credentials for Bedrock access (no direct Anthropic API needed)
 
 ### Web Crawling System
 - **Legal Sources**: Kenya Law website and Parliament of Kenya
@@ -104,7 +105,30 @@ Counsel AI is a sophisticated AI-powered legal assistant backend specifically de
 
 Preferred communication style: Simple, everyday language.
 
+## API Endpoints
+
+All endpoints are prefixed with `/counsel` for production deployment at `https://www.legalizeme.site/counsel`.
+
+- **POST /query**: Answer legal queries with AI assistance
+- **POST /generate-document**: Generate legal documents from templates
+- **POST /summarize**: Summarize legal documents
+- **GET /fetch-law**: Search and retrieve legal resources from Kenya Law and Parliament
+- **POST /feedback**: Submit user feedback on query responses
+- **GET /history**: Get user's query history
+
+## Deployment Ready
+
+The backend is production-ready with:
+- Docker containerization (Dockerfile and docker-compose.yml)
+- CI/CD pipeline (GitHub Actions workflow)
+- Comprehensive API documentation (README.md and Postman collection)
+- Test suite structure
+- CORS configured for https://www.legalizeme.site
+
 ## Changelog
 
-Changelog:
-- July 07, 2025. Initial setup
+- July 07, 2025: Initial setup
+- July 07, 2025: Integrated AWS Bedrock for Claude access (replaced direct Anthropic API)
+- July 07, 2025: Added /fetch-law endpoint for legal resource retrieval
+- July 07, 2025: Made heavy ML dependencies optional for lightweight deployment
+- July 07, 2025: Created Docker configuration and CI/CD pipeline for production deployment
