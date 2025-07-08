@@ -1,0 +1,74 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: legalizeme-counsel-db
+    env: postgresql
+    plan: starter
+    databaseName: counsel_db
+    databaseUser: counsel_user
+
+  # Main FastAPI Web Service
+  - type: web
+    name: legalizeme-counsel-api
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      # Application Configuration
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: INFO
+      
+      # Database Configuration (Auto-generated)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: legalizeme-counsel-db
+          property: connectionString
+      
+      # AWS Bedrock Configuration (Set these manually)
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: us-east-1
+      
+      # AWS Bedrock Model IDs
+      - key: AWS_BEDROCK_MODEL_ID_PRIMARY
+        value: us.anthropic.claude-sonnet-4-20250514-v1:0
+      - key: AWS_BEDROCK_MODEL_ID_SECONDARY
+        value: us.anthropic.claude-3-7-sonnet-20250219-v1:0
+      - key: AWS_BEDROCK_MODEL_ID_FALLBACK
+        value: mistral.mistral-large-2402-v1:0
+      
+      # Security (Set manually)
+      - key: SECRET_KEY
+        sync: false
+      
+      # Model Configuration
+      - key: DEFAULT_AI_MODEL
+        value: claude-sonnet-4
+      - key: FALLBACK_AI_MODEL
+        value: mistral-large
+      - key: ENABLE_LOCAL_MODELS
+        value: false
+      - key: MODEL_TIMEOUT
+        value: 60
+      - key: MAX_QUERY_LENGTH
+        value: 2000
+      
+      # CORS Configuration
+      - key: ALLOWED_ORIGINS
+        value: https://www.legalizeme.site,https://legalizeme.site,http://localhost:3000
+      
+      # Optional
+      - key: HUGGING_FACE_TOKEN
+        sync: false
+    
+    # Auto-deploy from main branch
+    autoDeploy: true

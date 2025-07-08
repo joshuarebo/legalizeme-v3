@@ -58,8 +58,13 @@ async def lifespan(app: FastAPI):
         # Initialize intelligence enhancer
         intelligence_enhancer = IntelligenceEnhancer(vector_service)
 
-        # Initialize rate limiter
-        rate_limiter = RateLimiter(getattr(settings, 'REDIS_URL', None))
+        # Initialize rate limiter (Redis optional)
+        redis_url = getattr(settings, 'REDIS_URL', None)
+        if redis_url:
+            logger.info(f"Initializing rate limiter with Redis: {redis_url[:20]}...")
+        else:
+            logger.info("Initializing rate limiter with in-memory cache (Redis not available)")
+        rate_limiter = RateLimiter(redis_url)
 
         # Store services in app state for access by routes
         app.state.crawler_service = crawler_service

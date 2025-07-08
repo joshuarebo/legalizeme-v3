@@ -690,7 +690,7 @@ class AIService:
                 'error': str(e)
             }
 
-    def _prepare_training_data(self, data_path: str, tokenizer) -> Dataset:
+    def _prepare_training_data(self, data_path: str, tokenizer) -> Optional[Any]:
         """Prepare training data for fine-tuning"""
         try:
             # Load training data (expecting JSONL format)

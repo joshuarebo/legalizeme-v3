@@ -80,12 +80,15 @@ You should now see 8 secrets in your repository secrets list.
 3. Click **"Create Database"**
 4. **Wait for database to be ready** (2-3 minutes)
 
-### 2.3 Create Redis Instance
+### 2.3 Create Redis Instance (Optional - Skip for Now)
+**Note**: Redis is optional. The app will work without it using in-memory caching.
+
+If you want Redis later:
 1. Click **"New"** → **"Redis"**
 2. Configure:
    - **Name**: `legalizeme-counsel-redis`
    - **Region**: Same as database
-   - **Plan**: `Free` (for testing) or `Starter` (for production)
+   - **Plan**: `Starter` ($7/month minimum)
 3. Click **"Create Redis"**
 4. **Wait for Redis to be ready** (1-2 minutes)
 
@@ -108,9 +111,11 @@ You should now see 8 secrets in your repository secrets list.
 ### 2.5 Configure Environment Variables
 In the **Environment Variables** section, add these **one by one**:
 
-**Database & Redis (Auto-generated)**
+**Database (Auto-generated)**
 - `DATABASE_URL`: Select **"From Database"** → Choose `legalizeme-counsel-db`
-- `REDIS_URL`: Select **"From Service"** → Choose `legalizeme-counsel-redis`
+
+**Redis (Optional - Skip for now)**
+- `REDIS_URL`: Leave empty or add later if you created Redis service
 
 **AWS Configuration**
 - `AWS_ACCESS_KEY_ID`: `[Your AWS Access Key ID]`
