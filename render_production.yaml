@@ -1,0 +1,195 @@
+services:
+  # Main FastAPI Web Service
+  - type: web
+    name: legalizeme-counsel-api
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      # Application Configuration
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: LOG_LEVEL
+        value: INFO
+      
+      # Security Configuration
+      - key: SECRET_KEY
+        sync: false  # Set in Render dashboard
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: ALGORITHM
+        value: HS256
+      
+      # Database Configuration (PostgreSQL)
+      - key: DATABASE_URL
+        fromDatabase:
+          name: legalizeme-counsel-db
+          property: connectionString
+      
+      # Redis Configuration
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: legalizeme-counsel-redis
+          property: connectionString
+      
+      # AWS Bedrock Configuration (from secrets)
+      - key: AWS_ACCESS_KEY_ID
+        sync: false  # Set in Render dashboard
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false  # Set in Render dashboard
+      - key: AWS_REGION
+        value: us-east-1
+      
+      # AWS Bedrock Model IDs
+      - key: AWS_BEDROCK_MODEL_ID_PRIMARY
+        value: us.anthropic.claude-sonnet-4-20250514-v1:0
+      - key: AWS_BEDROCK_MODEL_ID_SECONDARY
+        value: us.anthropic.claude-3-7-sonnet-20250219-v1:0
+      - key: AWS_BEDROCK_MODEL_ID_FALLBACK
+        value: mistral.mistral-large-2402-v1:0
+      
+      # AI Model API Keys (Optional)
+      - key: HUGGING_FACE_TOKEN
+        sync: false  # Set in Render dashboard
+      - key: OPENAI_API_KEY
+        value: your_openai_api_key_if_needed
+      
+      # Model Configuration
+      - key: DEFAULT_AI_MODEL
+        value: claude-sonnet-4
+      - key: FALLBACK_AI_MODEL
+        value: mistral-large
+      - key: ENABLE_LOCAL_MODELS
+        value: false
+      - key: ENABLE_MODEL_FINE_TUNING
+        value: false
+      - key: MODEL_HEALTH_CHECK_INTERVAL
+        value: 300
+      - key: MODEL_CACHE_TTL
+        value: 3600
+      - key: MAX_MODEL_RETRIES
+        value: 3
+      - key: MODEL_TIMEOUT
+        value: 60
+      
+      # Performance Monitoring
+      - key: ENABLE_PERFORMANCE_MONITORING
+        value: true
+      - key: MAX_ERROR_RATE_THRESHOLD
+        value: 0.3
+      - key: MAX_RESPONSE_TIME_THRESHOLD
+        value: 60.0
+      - key: MONITORING_WINDOW_SIZE
+        value: 100
+      
+      # Rate Limiting
+      - key: RATE_LIMIT_REQUESTS
+        value: 100
+      - key: RATE_LIMIT_WINDOW
+        value: 3600
+      
+      # Document Processing
+      - key: MAX_DOCUMENT_SIZE
+        value: 10485760  # 10MB
+      - key: MAX_QUERY_LENGTH
+        value: 2000
+      
+      # Vector Store Configuration
+      - key: EMBEDDING_MODEL
+        value: all-MiniLM-L6-v2
+      - key: CHROMA_PERSIST_DIRECTORY
+        value: ./chroma_db
+      
+      # CORS Configuration
+      - key: ALLOWED_ORIGINS
+        value: https://www.legalizeme.site,https://legalizeme.site,http://localhost:3000
+      
+      # Legal Jurisdiction
+      - key: DEFAULT_JURISDICTION
+        value: kenya
+      - key: SUPPORTED_JURISDICTIONS
+        value: kenya,east_africa
+      
+      # Crawler Settings
+      - key: KENYA_LAW_BASE_URL
+        value: https://new.kenyalaw.org
+      - key: PARLIAMENT_BASE_URL
+        value: http://parliament.go.ke
+      - key: CRAWLER_DELAY
+        value: 2
+      - key: MAX_CONCURRENT_REQUESTS
+        value: 5
+      
+      # Production Settings
+      - key: WORKERS
+        value: 4
+      - key: WORKER_CONNECTIONS
+        value: 1000
+      - key: KEEPALIVE_TIMEOUT
+        value: 2
+      - key: MAX_REQUESTS
+        value: 1000
+      - key: MAX_REQUESTS_JITTER
+        value: 50
+      
+      # Security Headers
+      - key: SECURE_SSL_REDIRECT
+        value: true
+      - key: SECURE_HSTS_SECONDS
+        value: 31536000
+      - key: SECURE_HSTS_INCLUDE_SUBDOMAINS
+        value: true
+      - key: SECURE_CONTENT_TYPE_NOSNIFF
+        value: true
+      - key: SECURE_BROWSER_XSS_FILTER
+        value: true
+      - key: SECURE_FRAME_DENY
+        value: true
+    
+    # Auto-deploy from main branch
+    autoDeploy: true
+    
+    # Health check configuration
+    healthCheck:
+      path: /health
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+  # PostgreSQL Database
+  - type: pserv
+    name: legalizeme-counsel-db
+    env: postgresql
+    plan: starter
+    databaseName: counsel_db
+    databaseUser: counsel_user
+    
+  # Redis Cache
+  - type: redis
+    name: legalizeme-counsel-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+# Environment-specific configurations
+environments:
+  production:
+    services:
+      - name: legalizeme-counsel-api
+        envVars:
+          - key: ENVIRONMENT
+            value: production
+          - key: DEBUG
+            value: false
+          - key: LOG_LEVEL
+            value: INFO
+          - key: ENABLE_LOCAL_MODELS
+            value: false
+          - key: ENABLE_MODEL_FINE_TUNING
+            value: false
+        plan: standard  # Upgrade to standard plan for production
