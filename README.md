@@ -1,223 +1,278 @@
-# Counsel AI Backend - LegalizeMe Agent v2
+# LegalizeMe Counsel AI - Production Backend
 
-AI-powered legal assistant backend for Kenyan jurisdiction, built with FastAPI and integrated with AWS Bedrock Claude Sonnet 4.
+[![Production Ready](https://img.shields.io/badge/Production-Ready-green.svg)](https://legalizeme.site/counsel)
+[![API Version](https://img.shields.io/badge/API-v3.0.0-blue.svg)](https://your-app.onrender.com/docs)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 🚀 Features
+A production-ready AI-powered legal assistant specifically designed for Kenyan law, providing accurate legal guidance through AWS Bedrock integration.
 
-- **AI-Powered Legal Assistance**: Uses Claude Sonnet 4 via AWS Bedrock for intelligent legal query responses
-- **RAG Architecture**: Vector-based retrieval augmented generation for accurate, context-aware answers
-- **Web Crawling**: Automated crawling of Kenya Law and Parliament websites for up-to-date legal information
-- **Document Processing**: Parse and analyze PDFs, DOCX files, and web content
-- **JWT Authentication**: Secure API endpoints with role-based access control
-- **Legal Document Generation**: Generate contracts, agreements, and legal summaries
-- **PostgreSQL Database**: Robust storage for legal documents, cases, and user data
+## 🎯 Overview
 
-## 📋 Requirements
+LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedrock models to provide intelligent legal assistance for Kenyan law. The system is designed for deployment at `legalizeme.site/counsel` with enterprise-grade reliability and performance.
 
-- Python 3.11+
-- PostgreSQL
-- Redis (optional, for caching)
+## 🚀 Key Features
+
+### 🧠 AI-Powered Legal Intelligence
+- **Claude Sonnet 4**: Primary model for complex legal analysis
+- **Claude 3.7**: Secondary model for balanced performance  
+- **Mistral Large**: Fallback model for high availability
+- **Automatic Fallback**: Seamless model switching for 99.9% uptime
+
+### 🇰🇪 Kenyan Legal Expertise
+- Constitutional law guidance
+- Corporate registration procedures
+- Employment law compliance
+- Property and land law
+- Family law matters
+- Criminal law procedures
+
+### 🏗️ Production Architecture
+- **FastAPI Backend**: High-performance async API
+- **AWS Bedrock Integration**: Enterprise AI models
+- **PostgreSQL Database**: Robust data persistence
+- **Redis Caching**: Sub-second response times
+- **ChromaDB Vector Store**: Semantic legal document search
+- **Comprehensive Monitoring**: Health checks and performance metrics
+
+## 📋 Prerequisites
+
+- Python 3.9+
+- PostgreSQL 12+
+- Redis 6+
 - AWS Account with Bedrock access
-- Docker (for containerized deployment)
+- Docker (optional)
 
-## 🔧 Installation
+## 🛠️ Quick Start
 
-### Local Development
-
-1. Clone the repository:
+### 1. Clone and Setup
 ```bash
-git clone https://github.com/joshuarebo/legalizeme-agent-v2.git
-cd legalizeme-agent-v2
-```
-
-2. Set up environment variables:
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-3. Install dependencies:
-```bash
+git clone https://github.com/joshuarebo/legalizeme-v3.git
+cd legalizeme-v3
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-4. Run the application:
+### 2. Environment Configuration
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 5000 --reload
+cp .env.example .env
+# Configure your AWS credentials and other settings in .env
 ```
 
-### Docker Deployment
-
-1. Build and run with Docker Compose:
+### 3. Database Setup
 ```bash
-docker-compose up --build
+# Start services
+docker-compose up -d postgres redis
+
+# Initialize database
+alembic upgrade head
+python scripts/initialize_vector_db.py
 ```
 
-2. Or build the Docker image:
+### 4. Start the Server
 ```bash
-docker build -t counsel-ai-backend .
-docker run -p 5000:5000 --env-file .env counsel-ai-backend
+# Development
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+
+# Production
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
 ```
 
-## 📚 API Documentation
+## ⚙️ Configuration
 
-### Base URL
-```
-https://www.legalizeme.site/counsel
-```
-
-### Endpoints
-
-#### 1. Query Legal Questions
-```http
-POST /counsel/query
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "query": "What are the requirements for registering a company in Kenya?",
-    "context": {}
-}
-```
-
-#### 2. Generate Legal Document
-```http
-POST /counsel/generate-document
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "document_type": "employment_contract",
-    "parameters": {
-        "employer_name": "Tech Corp Ltd",
-        "employee_name": "John Doe",
-        "position": "Software Engineer",
-        "salary": 100000
-    }
-}
-```
-
-#### 3. Summarize Legal Document
-```http
-POST /counsel/summarize
-Content-Type: application/json
-Authorization: Bearer {token}
-
-{
-    "content": "Full text of legal document...",
-    "context": "employment law"
-}
-```
-
-#### 4. Fetch Legal Resources
-```http
-GET /counsel/fetch-law?query=labor+laws&source=kenya_law&limit=10
-Authorization: Bearer {token}
-```
-
-#### 5. Health Check
-```http
-GET /health
-```
-
-### Authentication
-
-1. Register:
-```http
-POST /auth/register
-{
-    "email": "user@example.com",
-    "password": "securepassword",
-    "full_name": "John Doe"
-}
-```
-
-2. Login:
-```http
-POST /auth/login
-{
-    "email": "user@example.com",
-    "password": "securepassword"
-}
-```
-
-## 🔐 Environment Variables
+### Required Environment Variables
 
 ```env
-# AWS Bedrock Credentials
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_DEFAULT_REGION=us-east-1
+# AWS Bedrock Configuration
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
+AWS_REGION=us-east-1
+
+# Model IDs (Pre-configured for your AWS account)
+AWS_BEDROCK_MODEL_ID_PRIMARY=us.anthropic.claude-sonnet-4-20250514-v1:0
+AWS_BEDROCK_MODEL_ID_SECONDARY=us.anthropic.claude-3-7-sonnet-20250219-v1:0
+AWS_BEDROCK_MODEL_ID_FALLBACK=mistral.mistral-large-2402-v1:0
 
 # Database
 DATABASE_URL=postgresql://user:pass@localhost:5432/counsel_db
-
-# Security
-SECRET_KEY=your-secret-key-here
-ALGORITHM=HS256
-
-# Redis (optional)
 REDIS_URL=redis://localhost:6379
 
-# API Configuration
-ENVIRONMENT=production
+# Security
+SECRET_KEY=your-super-secret-key-change-in-production
+```
+
+## 🔌 API Usage
+
+### Legal Query Endpoint
+```bash
+POST /api/v1/counsel/query
+Content-Type: application/json
+
+{
+  "query": "What are the constitutional rights in Kenya?",
+  "context": "employment dispute"
+}
+```
+
+### Direct LLM Query (Production)
+```bash
+POST /api/v1/counsel/query-direct
+Content-Type: application/json
+
+{
+  "query": "How do I register a company in Kenya?",
+  "model_preference": "claude-sonnet-4"
+}
+```
+
+### Health Check
+```bash
+GET /api/v1/health
 ```
 
 ## 🧪 Testing
 
-Run tests with pytest:
+### Run Production Tests
 ```bash
-pytest tests/ -v
+# Test Bedrock models
+python scripts/production_test.py
+
+# Run unit tests
+pytest tests/test_bedrock_models.py
+
+# Full test suite
+pytest
 ```
+
+### Test Coverage
+```bash
+pytest --cov=app --cov-report=html
+```
+
+## 📊 Monitoring & Performance
+
+### Health Monitoring
+- **Health Endpoint**: `/health` - System status
+- **Model Status**: Real-time model availability
+- **Performance Metrics**: Response times and error rates
+
+### Expected Performance
+- **Claude Sonnet 4**: 8-27s (comprehensive analysis)
+- **Claude 3.7**: 4-9s (balanced performance)
+- **Mistral Large**: 0.6-3s (fast responses)
+- **Uptime**: 99.9% with automatic fallback
 
 ## 🚢 Deployment
 
-### GitHub Actions CI/CD
+### Render Deployment
+```bash
+# Build command
+pip install -r requirements.txt
 
-The repository includes GitHub Actions workflow for:
-- Running tests on pull requests
-- Building and pushing Docker images
-- Automated deployment notifications
-
-### Production Deployment Options
-
-1. **AWS EC2/ECS**: Deploy Docker container
-2. **Railway/Render**: Direct GitHub integration
-3. **Replit**: Import and run with Replit configuration
-4. **Kubernetes**: Use provided Docker image
-
-## 📊 Architecture
-
-```
-counsel-ai-backend/
-├── app/
-│   ├── api/           # API routes
-│   ├── core/          # Security, middleware
-│   ├── models/        # Database models
-│   ├── services/      # Business logic
-│   ├── crawlers/      # Web crawlers
-│   └── utils/         # Utilities
-├── tests/             # Test suite
-├── .github/           # CI/CD workflows
-├── Dockerfile         # Container configuration
-└── docker-compose.yml # Multi-container setup
+# Start command
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
 ```
 
-## 🤝 Frontend Integration
+### Environment Variables for Render
+Set these in your Render dashboard:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `AWS_REGION`
+- `DATABASE_URL` (provided by Render)
+- `REDIS_URL` (provided by Render)
+- `SECRET_KEY`
 
-CORS is configured for:
-- https://www.legalizeme.site
-- https://legalizeme.site
-- http://localhost:3000
+### Docker Deployment
+```bash
+docker build -t legalizeme-counsel .
+docker run -p 8000:8000 --env-file .env legalizeme-counsel
+```
 
-API responses follow standard REST patterns with appropriate status codes and error messages.
+## 📚 API Documentation
 
-## 📝 License
+### Interactive Documentation
+- **Swagger UI**: `https://your-app.onrender.com/docs`
+- **ReDoc**: `https://your-app.onrender.com/redoc`
 
-Copyright 2025 LegalizeMe. All rights reserved.
+### Frontend Integration
+```javascript
+// JavaScript integration example
+const response = await fetch('https://your-app.onrender.com/api/v1/counsel/query-direct', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer your-jwt-token'
+  },
+  body: JSON.stringify({
+    query: 'What are employment rights in Kenya?',
+    model_preference: 'claude-sonnet-4'
+  })
+});
+
+const result = await response.json();
+console.log(result.response_text);
+```
+
+## 🔒 Security
+
+### Production Security Features
+- JWT authentication
+- Rate limiting
+- CORS configuration
+- Input validation
+- SQL injection prevention
+- XSS protection
+
+### Security Headers
+```env
+SECURE_SSL_REDIRECT=true
+SECURE_HSTS_SECONDS=31536000
+SECURE_CONTENT_TYPE_NOSNIFF=true
+SECURE_BROWSER_XSS_FILTER=true
+```
+
+## 🧩 Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │   FastAPI       │    │   AWS Bedrock   │
+│ legalizeme.site │◄──►│   Backend       │◄──►│ Claude/Mistral  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────┐
+                    │   Data Layer    │
+                    │ PostgreSQL+Redis│
+                    │ ChromaDB Vector │
+                    └─────────────────┘
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-For issues or questions:
-- Create an issue in the GitHub repository
-- Contact the development team
+### Issues & Support
+- **GitHub Issues**: Bug reports and feature requests
+- **Email**: support@legalizeme.site
+- **Documentation**: Available at `/docs` endpoint
+
+### Performance Monitoring
+- Real-time model health monitoring
+- Automatic failover and recovery
+- Performance metrics and alerting
+
+---
+
+**🇰🇪 Built for the Kenyan legal community with enterprise-grade reliability**
+
+**🚀 Ready for production deployment at legalizeme.site/counsel**

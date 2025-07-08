@@ -8,6 +8,7 @@ from datetime import datetime
 from app.services.ai_service import AIService
 from app.services.mcp_service import MCPService
 from app.services.vector_service import VectorService
+from app.services.llm_manager import llm_manager
 from app.database import get_db
 from app.models.user import User
 from app.models.query import Query
@@ -60,6 +61,18 @@ class QueryFeedback(BaseModel):
     query_id: str
     rating: int = Field(..., ge=1, le=5)
     feedback: Optional[str] = None
+
+class DirectQueryRequest(BaseModel):
+    query: str = Field(..., max_length=settings.MAX_QUERY_LENGTH)
+    model_preference: Optional[str] = Field(default=None, description="Preferred model: claude-sonnet, claude-haiku, or mistral-7b")
+
+class DirectQueryResponse(BaseModel):
+    response_text: str
+    model_used: str
+    model_id: str
+    latency_ms: float
+    success: bool
+    timestamp: datetime
 
 # Initialize services
 ai_service = AIService()
@@ -128,6 +141,35 @@ async def ask_legal_question(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing query: {str(e)}"
+        )
+
+@router.post("/query-direct", response_model=DirectQueryResponse)
+async def direct_llm_query(
+    request: DirectQueryRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """Direct query to LLM manager with fallback logic - Production endpoint"""
+    try:
+        # Use LLM manager directly for production queries
+        result = await llm_manager.invoke_model(
+            prompt=request.query,
+            model_preference=request.model_preference
+        )
+
+        return DirectQueryResponse(
+            response_text=result['response_text'],
+            model_used=result['model_used'],
+            model_id=result['model_id'],
+            latency_ms=result['latency_ms'],
+            success=result['success'],
+            timestamp=datetime.utcnow()
+        )
+
+    except Exception as e:
+        logger.error(f"Error in direct LLM query: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing direct query: {str(e)}"
         )
 
 @router.post("/generate-document", response_model=DocumentGenerationResponse)

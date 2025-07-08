@@ -67,5 +67,48 @@ counsel_ai.log
 .local/
 .upm/
 
+# AI Model files
+models/
+*.bin
+*.safetensors
+*.onnx
+*.pt
+*.pth
+
+# Test results and reports
+*_test_results.json
+bedrock_test_results.json
+cloud_model_test_results.json
+local_test_results.json
+final_user_experience_report.json
+
+# Data files
+data/raw/
+data/processed/
+data/external/
+*.csv
+*.jsonl
+*.parquet
+
+# Secrets and credentials
+secrets/
+credentials/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
 # Docker
 .dockerignore

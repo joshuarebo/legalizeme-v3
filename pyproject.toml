@@ -4,34 +4,80 @@ version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.11"
 dependencies = [
-    "aiofiles>=24.1.0",
-    "aiohttp>=3.12.13",
-    "anthropic>=0.57.1",
-    "bcrypt>=4.3.0",
-    "beautifulsoup4>=4.13.4",
-    "boto3>=1.39.3",
-    "email-validator>=2.2.0",
+    # Web framework and server
     "fastapi>=0.115.14",
-    "httpx>=0.28.1",
-    "itsdangerous>=2.2.0",
-    "jinja2>=3.1.6",
-    "mammoth>=1.9.1",
-    "passlib>=1.7.4",
+    "uvicorn[standard]>=0.35.0",
+
+    # Database & cache layers
+    "sqlalchemy>=2.0.41",
     "psycopg2-binary>=2.9.10",
+    "redis>=6.2.0",
+
+    # Security
+    "bcrypt>=4.3.0",
+    "python-jose[cryptography]>=3.5.0",
+    "passlib[bcrypt]>=1.7.4",
+    "itsdangerous>=2.2.0",
+
+    # Validation
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
-    "pypdf2>=3.0.1",
-    "python-docx>=1.2.0",
-    "python-dotenv>=1.1.1",
-    "python-jose>=3.5.0",
-    "python-magic>=0.4.27",
+    "email-validator>=2.2.0",
+
+    # Networking & I/O
+    "httpx>=0.28.1",
+    "aiohttp>=3.12.13",
+    "aiofiles>=24.1.0",
     "python-multipart>=0.0.20",
-    "redis>=6.2.0",
+
+    # File parsing
+    "python-docx>=1.2.0",
+    "pypdf2>=3.0.1",
+    "mammoth>=1.9.1",
+    "python-magic>=0.4.27",
+
+    # Scraping & text cleaning
+    "beautifulsoup4>=4.13.4",
     "requests>=2.32.4",
-    "sqlalchemy>=2.0.41",
-    "structlog>=25.4.0",
     "trafilatura>=2.0.0",
-    "uvicorn>=0.35.0",
+
+    # LLMs & embeddings
+    "anthropic>=0.57.1",
+    "boto3>=1.39.3",
+    "transformers>=4.44.0",
+    "torch>=2.0.0",
+    "sentence-transformers>=3.0.0",
+    "nltk>=3.8.1",
+    "chromadb>=0.5.0",
+    "huggingface-hub>=0.24.0",
+    "datasets>=2.20.0",
+    "accelerate>=0.33.0",
+    "bitsandbytes>=0.43.0",
+    "adapters>=0.2.1",
+
+    # Config & observability
+    "python-dotenv>=1.1.1",
+    "structlog>=25.4.0",
+    "jinja2>=3.1.6",
+
+    # Rate limiting and middleware
+    "slowapi>=0.1.9",
+    "python-jose>=3.5.0",
+
+    # Additional AI/ML utilities
+    "numpy>=1.24.0",
+    "scikit-learn>=1.3.0",
+    "pandas>=2.0.0",
+    "tiktoken>=0.7.0",
+    "openai>=1.0.0",
+
+    # Vector databases and search
+    "faiss-cpu>=1.7.4",
+    "qdrant-client>=1.9.0",
+
+    # Monitoring and health checks
+    "prometheus-client>=0.20.0",
+    "psutil>=5.9.0",
 ]
 
 [[tool.uv.index]]
