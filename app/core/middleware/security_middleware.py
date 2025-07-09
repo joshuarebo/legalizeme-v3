@@ -74,8 +74,13 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         """Main middleware dispatch method"""
         start_time = time.time()
-        
+
         try:
+            # Skip security checks for docs endpoints
+            if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+                response = await call_next(request)
+                return response
+
             # Pre-request security checks
             security_check = await self._pre_request_security_check(request)
             if not security_check['allowed']:
@@ -302,14 +307,14 @@ class SecurityMiddleware(BaseHTTPMiddleware):
     
     def _add_security_headers(self, response: Response):
         """Add security headers to response"""
-        
-        # Content Security Policy
+
+        # Content Security Policy - Allow Swagger UI CDN resources
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
-            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
             "img-src 'self' data: https:; "
-            "font-src 'self' https:; "
+            "font-src 'self' https: data:; "
             "connect-src 'self' https:; "
             "frame-ancestors 'none';"
         )

@@ -1,0 +1,94 @@
+{
+  "family": "counsel-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::585008043505:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::585008043505:role/counsel-task-role",
+  "containerDefinitions": [
+    {
+      "name": "counsel-container",
+      "image": "585008043505.dkr.ecr.us-east-1.amazonaws.com/counsel-ai:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "ALLOWED_ORIGINS",
+          "value": "https://www.legalizeme.site,https://legalizeme.site"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_PRIMARY",
+          "value": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "value": "YOUR_AWS_ACCESS_KEY_ID"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "value": "YOUR_AWS_SECRET_ACCESS_KEY"
+        },
+        {
+          "name": "SECRET_KEY",
+          "value": "DsMguwAf8OZ4iVy7h0ro7ICUx4A26fsMeVoQeY2GItI"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_FALLBACK",
+          "value": "mistral.mistral-7b-instruct-v0:2"
+        },
+        {
+          "name": "HUGGING_FACE_TOKEN",
+          "value": "YOUR_HUGGING_FACE_TOKEN"
+        },
+        {
+          "name": "DEBUG",
+          "value": "false"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_SECONDARY",
+          "value": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:585008043505:parameter/counsel/database-url"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/counsel-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/health/live || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}

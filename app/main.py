@@ -141,7 +141,19 @@ app = FastAPI(
     lifespan=lifespan,
     docs_url="/docs",  # Always enable docs for API integration
     redoc_url="/redoc",  # Always enable redoc for API integration
-    openapi_url="/openapi.json"  # Always enable OpenAPI schema
+    openapi_url="/openapi.json",  # Always enable OpenAPI schema
+    swagger_ui_parameters={
+        "deepLinking": True,
+        "displayRequestDuration": True,
+        "defaultModelsExpandDepth": 1,
+        "defaultModelExpandDepth": 1,
+        "defaultModelRendering": "example",
+        "displayOperationId": False,
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+        "tryItOutEnabled": True
+    }
 )
 
 # Configure CORS based on environment
@@ -157,6 +169,11 @@ elif settings.ENVIRONMENT == "production":
     # Get from environment variable or use defaults
     origins_str = getattr(settings, 'ALLOWED_ORIGINS', 'https://www.legalizeme.site,https://legalizeme.site')
     allowed_origins = [origin.strip() for origin in origins_str.split(',')]
+    # Add ALB domain for Swagger UI to work
+    allowed_origins.extend([
+        "http://counsel-alb-694525771.us-east-1.elb.amazonaws.com",
+        "https://counsel-alb-694525771.us-east-1.elb.amazonaws.com"
+    ])
 
 # CORS middleware
 app.add_middleware(
