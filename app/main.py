@@ -139,9 +139,9 @@ app = FastAPI(
     description="AI-powered legal assistant for Kenyan jurisdiction with modular orchestration, RAG capabilities, and intelligent fallbacks",
     version="2.0.0",
     lifespan=lifespan,
-    docs_url="/docs" if getattr(settings, 'DEBUG', False) else None,
-    redoc_url="/redoc" if getattr(settings, 'DEBUG', False) else None,
-    openapi_url="/openapi.json" if getattr(settings, 'DEBUG', False) else None
+    docs_url="/docs",  # Always enable docs for API integration
+    redoc_url="/redoc",  # Always enable redoc for API integration
+    openapi_url="/openapi.json"  # Always enable OpenAPI schema
 )
 
 # Configure CORS based on environment
