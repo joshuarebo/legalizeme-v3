@@ -1,0 +1,67 @@
+# AWS ECS Fargate-optimized Dockerfile for Counsel AI Legal Backend
+FROM python:3.11-slim
+
+# Set environment variables for Python and AWS
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONPATH=/app \
+    PORT=8000 \
+    AWS_DEFAULT_REGION=us-east-1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    git \
+    libpq-dev \
+    libmagic1 \
+    ca-certificates \
+    procps \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create app directory
+WORKDIR /app
+
+# Create non-root user for security (ECS best practice)
+RUN useradd --create-home --shell /bin/bash --user-group --uid 1000 appuser
+
+# Copy requirements first for better Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create necessary directories and set proper permissions
+RUN mkdir -p /app/data /app/models /app/logs /app/chroma_db /app/reports /app/tmp && \
+    chown -R appuser:appuser /app && \
+    chmod -R 755 /app
+
+# Switch to non-root user for security
+USER appuser
+
+# Expose port 8000 for the FastAPI application
+EXPOSE 8000
+
+# Health check optimized for ECS ALB health checks
+HEALTHCHECK --interval=30s --timeout=15s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Signal handling and graceful shutdown for ECS
+STOPSIGNAL SIGTERM
+
+# ECS Fargate optimized command
+# Single worker for 0.5 vCPU, can be scaled via ECS service
+CMD ["uvicorn", "app.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "1", \
+     "--access-log", \
+     "--log-level", "info", \
+     "--timeout-keep-alive", "65"]

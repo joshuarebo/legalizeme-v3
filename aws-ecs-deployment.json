@@ -1,0 +1,118 @@
+{
+  "family": "counsel-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::585008043505:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::585008043505:role/counsel-task-role",
+  "containerDefinitions": [
+    {
+      "name": "counsel-container",
+      "image": "585008043505.dkr.ecr.us-east-1.amazonaws.com/counsel-ai:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/counsel-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "DEBUG",
+          "value": "false"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "INFO"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_PRIMARY",
+          "value": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_SECONDARY",
+          "value": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_FALLBACK",
+          "value": "mistral.mistral-large-2402-v1:0"
+        },
+        {
+          "name": "DEFAULT_AI_MODEL",
+          "value": "claude-sonnet-4"
+        },
+        {
+          "name": "FALLBACK_AI_MODEL",
+          "value": "mistral-large"
+        },
+        {
+          "name": "ENABLE_LOCAL_MODELS",
+          "value": "false"
+        },
+        {
+          "name": "MODEL_TIMEOUT",
+          "value": "60"
+        },
+        {
+          "name": "MAX_QUERY_LENGTH",
+          "value": "2000"
+        },
+        {
+          "name": "ALLOWED_ORIGINS",
+          "value": "https://www.legalizeme.site,https://legalizeme.site"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "value": "YOUR_AWS_ACCESS_KEY_ID"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "value": "YOUR_AWS_SECRET_ACCESS_KEY"
+        },
+        {
+          "name": "SECRET_KEY",
+          "value": "YOUR_SECRET_KEY_FOR_JWT"
+        },
+        {
+          "name": "HUGGING_FACE_TOKEN",
+          "value": "YOUR_HUGGING_FACE_TOKEN"
+        }
+      ],
+
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:ACCOUNT_ID:parameter/counsel/database-url"
+        }
+      ],
+
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/health/live || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
