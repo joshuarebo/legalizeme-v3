@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/counsel_db")
+    TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "sqlite:///./test_counsel.db")
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", None)
     
     # Security

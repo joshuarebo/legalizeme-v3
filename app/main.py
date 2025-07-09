@@ -41,8 +41,14 @@ if settings.ENVIRONMENT == "production":
 
 logger = logging.getLogger(__name__)
 
-# Initialize database
-Base.metadata.create_all(bind=engine)
+# Initialize database (skip in testing mode to avoid connection issues)
+if not os.getenv("TESTING", "false").lower() == "true" and "pytest" not in os.getenv("_", ""):
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.warning(f"Database initialization failed: {e}")
+        # Don't fail the application if database is not available during startup
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

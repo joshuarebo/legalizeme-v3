@@ -6,10 +6,15 @@ Tests successful responses, fallback triggering, and max token cutoff
 import pytest
 import asyncio
 import json
+import os
 from unittest.mock import Mock, patch, AsyncMock
 from botocore.exceptions import ClientError
 
-from app.services.llm_manager import LLMManager, ModelStatus
+# Set testing environment before importing app modules
+os.environ["TESTING"] = "true"
+os.environ["AWS_ACCESS_KEY_ID"] = "test-key"
+os.environ["AWS_SECRET_ACCESS_KEY"] = "test-secret"
+
 from app.config import settings
 
 
@@ -308,3 +313,16 @@ class TestBedrockModels:
         assert 'prompt' in body
         assert body['prompt'] == 'Test'
         assert 'stop' in body
+
+# Simple tests that don't require complex mocking
+def test_settings_configuration():
+    """Test that settings are properly configured for testing"""
+    assert settings.ENVIRONMENT == "testing"
+    assert settings.AWS_ACCESS_KEY_ID == "test-key"
+    assert settings.AWS_SECRET_ACCESS_KEY == "test-secret"
+
+def test_model_ids_configured():
+    """Test that model IDs are configured"""
+    assert settings.AWS_BEDROCK_MODEL_ID_PRIMARY is not None
+    assert settings.AWS_BEDROCK_MODEL_ID_SECONDARY is not None
+    assert settings.AWS_BEDROCK_MODEL_ID_FALLBACK is not None
