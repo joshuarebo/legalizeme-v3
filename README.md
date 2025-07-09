@@ -1,10 +1,16 @@
-# LegalizeMe Counsel AI - Production Backend
+# 🏛️ LegalizeMe Counsel AI - Enterprise Legal Intelligence Platform
 
-[![Production Ready](https://img.shields.io/badge/Production-Ready-green.svg)](https://legalizeme.site/counsel)
-[![API Version](https://img.shields.io/badge/API-v3.0.0-blue.svg)](https://your-app.onrender.com/docs)
+[![Production Ready](https://img.shields.io/badge/Production-Ready-green.svg)](https://www.legalizeme.site/counsel)
+[![API Version](https://img.shields.io/badge/API-v3.0.0-blue.svg)](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs)
+[![AWS ECS](https://img.shields.io/badge/AWS-ECS%20Fargate-orange.svg)](https://aws.amazon.com/ecs/)
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2015.8-blue.svg)](https://postgresql.org/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-green.svg)](https://github.com/joshuarebo/legalizeme-v3/actions)
 
-A production-ready AI-powered legal assistant specifically designed for Kenyan law, providing accurate legal guidance through AWS Bedrock integration.
+**Enterprise-grade AI-powered legal intelligence platform specifically designed for Kenyan jurisdiction, delivering accurate legal guidance through AWS Bedrock's most advanced language models.**
+
+> 🎯 **Production URL**: [https://www.legalizeme.site/counsel](https://www.legalizeme.site/counsel)
+> 📚 **API Documentation**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs)
 
 ## 🎯 Overview
 
@@ -164,23 +170,36 @@ pytest --cov=app --cov-report=html
 
 ## 🚢 Deployment
 
-### Render Deployment
+### AWS ECS Fargate Deployment (Production)
 ```bash
-# Build command
-pip install -r requirements.txt
+# Deploy complete infrastructure
+.\create-infrastructure.ps1
 
-# Start command
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+# Deploy RDS PostgreSQL database
+.\setup-rds-database.ps1
+
+# Fix ALB health checks
+.\fix-alb-health-check.ps1
+
+# Validate deployment
+.\validate-production-setup.ps1
 ```
 
-### Environment Variables for Render
-Set these in your Render dashboard:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-- `DATABASE_URL` (provided by Render)
-- `REDIS_URL` (provided by Render)
-- `SECRET_KEY`
+### Production URLs
+- **API Base**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com`
+- **Health Check**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health/live`
+- **API Documentation**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs`
+
+### Environment Variables for Production
+Set these in AWS Parameter Store and GitHub Secrets:
+- `AWS_ACCESS_KEY_ID` (GitHub Secret)
+- `AWS_SECRET_ACCESS_KEY` (GitHub Secret)
+- `AWS_REGION=us-east-1`
+- `DATABASE_URL` (Parameter Store: `/counsel/database-url`)
+- `SECRET_KEY` (GitHub Secret)
+- `AWS_BEDROCK_MODEL_ID_PRIMARY=us.anthropic.claude-sonnet-4-20250514-v1:0`
+- `AWS_BEDROCK_MODEL_ID_SECONDARY=us.anthropic.claude-3-7-sonnet-20250219-v1:0`
+- `AWS_BEDROCK_MODEL_ID_FALLBACK=mistral.mistral-7b-instruct-v0:2`
 
 ### Docker Deployment
 ```bash
@@ -191,13 +210,16 @@ docker run -p 8000:8000 --env-file .env legalizeme-counsel
 ## 📚 API Documentation
 
 ### Interactive Documentation
-- **Swagger UI**: `https://your-app.onrender.com/docs`
-- **ReDoc**: `https://your-app.onrender.com/redoc`
+- **Swagger UI**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs`
+- **ReDoc**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/redoc`
 
 ### Frontend Integration
+📋 **Complete Integration Guide**: See [`FRONTEND_INTEGRATION_GUIDE.md`](./FRONTEND_INTEGRATION_GUIDE.md)
+
 ```javascript
 // JavaScript integration example
-const response = await fetch('https://your-app.onrender.com/api/v1/counsel/query-direct', {
+const API_BASE_URL = 'http://counsel-alb-694525771.us-east-1.elb.amazonaws.com';
+const response = await fetch(`${API_BASE_URL}/counsel/query-direct`, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -273,6 +295,25 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**🇰🇪 Built for the Kenyan legal community with enterprise-grade reliability**
+## 🚀 **Production Status**
 
-**🚀 Ready for production deployment at legalizeme.site/counsel**
+### **✅ Current Deployment**
+- **🌐 Frontend URL**: [https://www.legalizeme.site/counsel](https://www.legalizeme.site/counsel)
+- **🔗 API Base URL**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com)
+- **📚 API Documentation**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs)
+- **💚 Health Status**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health/live](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health/live)
+
+### **🎯 Ready for Production**
+✅ **Infrastructure**: AWS ECS Fargate with RDS PostgreSQL
+✅ **Security**: JWT authentication, rate limiting, CORS
+✅ **Monitoring**: CloudWatch logs, health checks, alerting
+✅ **CI/CD**: GitHub Actions automated deployment
+✅ **Documentation**: Comprehensive guides for frontend integration
+
+---
+
+**🇰🇪 Built for the Kenyan legal community with Silicon Valley engineering standards**
+
+**🚀 Enterprise-ready AI legal platform deployed on AWS cloud infrastructure**
+
+**⚖️ Empowering legal professionals with cutting-edge AI technology**
