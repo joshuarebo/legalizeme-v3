@@ -10,7 +10,7 @@ import time
 
 from app.config import settings
 from app.database import engine, Base, get_db
-from app.api.routes import counsel, documents, auth, health, models, multimodal
+from app.api.routes import counsel, documents, auth, health, models, multimodal, agents
 from app.core.middleware import setup_middleware
 from app.core.middleware.security_middleware import SecurityMiddleware
 from app.core.security.rate_limiter import RateLimiter
@@ -197,6 +197,7 @@ app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(counsel.router, prefix="/counsel", tags=["counsel"])
 app.include_router(documents.router, prefix="/documents", tags=["documents"])
 app.include_router(models.router, prefix="/models", tags=["model-management"])
+app.include_router(agents.router, prefix="/agents", tags=["intelligent-agents"])
 app.include_router(multimodal.router, prefix="/multimodal", tags=["multimodal-processing"])
 
 @app.get("/")

@@ -16,6 +16,13 @@ try:
     HAS_ENHANCED_RAG = True
 except ImportError:
     HAS_ENHANCED_RAG = False
+
+# Agent services (with fallback)
+try:
+    from app.agents.legal_research_agent import LegalResearchAgent, ResearchStrategy
+    HAS_AGENT = True
+except ImportError:
+    HAS_AGENT = False
 from app.database import get_db
 from app.models.user import User
 from app.models.query import Query
@@ -33,6 +40,7 @@ class LegalQueryRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
     query_type: str = Field(default="legal_query")
     use_enhanced_rag: bool = Field(default=True, description="Use enhanced RAG system (enabled by default for production)")
+    agent_mode: bool = Field(default=False, description="Use intelligent agent mode for comprehensive research")
 
 class LegalQueryResponse(BaseModel):
     query_id: str
@@ -46,6 +54,12 @@ class LegalQueryResponse(BaseModel):
     enhanced: bool = Field(default=False, description="Whether enhanced RAG was used")
     sources: Optional[List[Dict[str, Any]]] = Field(default=None, description="Enhanced source information")
     retrieval_strategy: Optional[str] = Field(default=None, description="Retrieval strategy used")
+    # Agent mode fields (optional)
+    agent_mode: bool = Field(default=False, description="Whether agent mode was used")
+    research_strategy: Optional[str] = Field(default=None, description="Research strategy used by agent")
+    reasoning_chain: Optional[List[str]] = Field(default=None, description="Agent reasoning chain")
+    follow_up_suggestions: Optional[List[str]] = Field(default=None, description="Agent follow-up suggestions")
+    related_queries: Optional[List[str]] = Field(default=None, description="Agent related queries")
 
 class DocumentGenerationRequest(BaseModel):
     document_type: str = Field(..., description="Type of document to generate")
@@ -91,6 +105,12 @@ ai_service = AIService()
 mcp_service = MCPService()
 vector_service = VectorService()
 
+# Initialize agent (with fallback)
+if HAS_AGENT:
+    legal_research_agent = LegalResearchAgent()
+else:
+    legal_research_agent = None
+
 @router.post("/query", response_model=LegalQueryResponse)
 async def ask_legal_question(
     request: LegalQueryRequest,
@@ -114,12 +134,81 @@ async def ask_legal_question(
         db.commit()
         db.refresh(query_record)
         
-        # Try enhanced RAG first if available and requested
+        # Initialize response tracking variables
         enhanced_used = False
         enhanced_sources = None
         retrieval_strategy = None
+        agent_used = False
+        research_strategy = None
+        reasoning_chain = None
+        follow_up_suggestions = None
+        related_queries = None
 
-        if request.use_enhanced_rag and HAS_ENHANCED_RAG:
+        # Try agent mode first if requested and available
+        if request.agent_mode and HAS_AGENT and legal_research_agent:
+            try:
+                logger.info(f"Using agent mode for query: {request.query[:50]}...")
+
+                # Use comprehensive strategy for agent mode
+                agent_result = await legal_research_agent.run_research(
+                    query=request.query,
+                    strategy=ResearchStrategy.COMPREHENSIVE,
+                    top_k=5,
+                    context=request.context or {}
+                )
+
+                if agent_result.confidence >= 0.5:  # Accept agent result if confidence is reasonable
+                    # Convert agent response to standard format
+                    relevant_docs = []
+                    enhanced_sources = []
+
+                    for citation in agent_result.citations:
+                        # For backward compatibility
+                        relevant_docs.append({
+                            'title': citation.title,
+                            'content': citation.excerpt,
+                            'source': citation.source,
+                            'relevance_score': citation.relevance_score
+                        })
+
+                        # For enhanced response
+                        enhanced_sources.append({
+                            'title': citation.title,
+                            'citation': citation.citation,
+                            'relevance_score': citation.relevance_score,
+                            'url': citation.url,
+                            'excerpt': citation.excerpt,
+                            'document_type': citation.document_type
+                        })
+
+                    response = {
+                        'answer': agent_result.answer,
+                        'confidence': agent_result.confidence,
+                        'model_used': agent_result.metadata.model_used,
+                        'relevant_documents': relevant_docs
+                    }
+
+                    agent_used = True
+                    retrieval_strategy = agent_result.retrieval_strategy
+                    research_strategy = agent_result.research_strategy.value
+                    reasoning_chain = agent_result.reasoning_chain
+                    follow_up_suggestions = agent_result.follow_up_suggestions
+                    related_queries = agent_result.related_queries
+
+                    logger.info(f"Agent mode used successfully for query: {request.query[:50]}...")
+                else:
+                    # Fall back to enhanced RAG if agent confidence is low
+                    logger.info("Agent confidence too low, falling back to enhanced RAG")
+                    response = None  # Will trigger fallback below
+
+            except Exception as e:
+                logger.error(f"Agent mode failed, falling back to enhanced RAG: {e}")
+                response = None  # Will trigger fallback below
+        else:
+            response = None  # Will use enhanced RAG or traditional approach
+
+        # Try enhanced RAG if agent mode wasn't used or failed
+        if not agent_used and request.use_enhanced_rag and HAS_ENHANCED_RAG and response is None:
             try:
                 # Initialize enhanced RAG service
                 enhanced_rag = LegalRAGService()
@@ -176,8 +265,8 @@ async def ask_legal_question(
             except Exception as e:
                 logger.error(f"Enhanced RAG failed, falling back to traditional: {e}")
                 response = await ai_service.answer_legal_query(request.query, request.context)
-        else:
-            # Use traditional AI service
+        elif response is None:
+            # Use traditional AI service as final fallback
             response = await ai_service.answer_legal_query(request.query, request.context)
         
         # Calculate processing time
@@ -204,7 +293,12 @@ async def ask_legal_question(
             timestamp=datetime.utcnow(),
             enhanced=enhanced_used,
             sources=enhanced_sources,
-            retrieval_strategy=retrieval_strategy
+            retrieval_strategy=retrieval_strategy,
+            agent_mode=agent_used,
+            research_strategy=research_strategy,
+            reasoning_chain=reasoning_chain,
+            follow_up_suggestions=follow_up_suggestions,
+            related_queries=related_queries
         )
         
     except Exception as e:

@@ -1,11 +1,116 @@
-# 🚀 Enhanced RAG System - Frontend Integration Update
+# 🚀 Enhanced RAG System & Intelligent Agents - Frontend Integration Update
 
 ## 📋 **IMPORTANT: New Enhanced Features Available**
 
-The Enhanced RAG System has been successfully implemented and is **100% backward compatible** with your existing JavaScript frontend at `https://www.legalizeme.site/counsel`. 
+The Enhanced RAG System and Intelligent Legal Research Agent have been successfully implemented and are **100% backward compatible** with your existing JavaScript frontend at `https://www.legalizeme.site/counsel`.
 
 **✅ Your existing code continues to work unchanged**
-**✅ New enhanced features available via optional parameters**
+**✅ New enhanced RAG features available via optional parameters**
+**✅ NEW: Intelligent Agent mode for comprehensive legal research**
+
+---
+
+## 🤖 **NEW: Dedicated Intelligent Agent Endpoint**
+
+### **Advanced Agent Research Endpoint**
+```
+POST /agents/research  // 🆕 NEW: Dedicated agent endpoint
+```
+
+This new endpoint provides advanced intelligent agent capabilities with sophisticated research strategies, memory, and chaining logic.
+
+### **Agent Request Format**
+```javascript
+const agentRequest = {
+  query: "What are employment rights in Kenya?",
+  strategy: "comprehensive",     // "quick", "comprehensive", "focused", "exploratory"
+  top_k: 5,                     // Number of sources to return
+  confidence_threshold: 0.7,     // Minimum confidence threshold
+  model_preference: "claude-sonnet-4",
+  context: {                    // Optional additional context
+    case_type: "employment",
+    jurisdiction: "kenya"
+  }
+};
+```
+
+### **Agent Response Format**
+```javascript
+const agentResponse = {
+  answer: "Comprehensive legal analysis...",
+  confidence: 0.92,
+  citations: [                  // Enhanced citation format
+    {
+      title: "Employment Act 2007",
+      source: "legislation",
+      url: "https://example.com/employment-act",
+      document_type: "legislation",
+      relevance_score: 0.95,
+      excerpt: "This Act applies to all employees...",
+      citation: "Employment Act, 2007, Section 1",
+      metadata: { /* additional metadata */ }
+    }
+  ],
+  retrieval_strategy: "hybrid",
+  research_strategy: "comprehensive",
+  metadata: {                   // Agent operation metadata
+    timestamp: "2025-01-10T...",
+    model_used: "claude-sonnet-4",
+    processing_time_ms: 2500.0,
+    sources_consulted: 8,
+    confidence_threshold: 0.7,
+    retry_count: 0,
+    fallback_used: false
+  },
+  reasoning_chain: [            // Agent reasoning steps
+    "Initiating hybrid retrieval search",
+    "Low confidence detected, expanding search with MCP service",
+    "Successfully integrated additional sources from MCP",
+    "Applying intelligence enhancement",
+    "Intelligence enhancement completed"
+  ],
+  follow_up_suggestions: [      // Intelligent suggestions
+    "What are the penalties for non-compliance with this law?",
+    "Are there any recent amendments to this legislation?",
+    "Can you provide more specific examples?"
+  ],
+  related_queries: [            // Related exploration queries
+    "What are the legal precedents for this issue?",
+    "How is this regulated under Kenyan law?",
+    "What are the procedural requirements?"
+  ]
+};
+```
+
+### **Using the Agent Endpoint**
+```javascript
+async function queryLegalAgent(userQuery, strategy = "comprehensive") {
+  const response = await fetch('/agents/research', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      query: userQuery,
+      strategy: strategy,
+      top_k: 5,
+      confidence_threshold: 0.7
+    })
+  });
+
+  const result = await response.json();
+
+  // Handle comprehensive agent response
+  displayAnswer(result.answer);
+  displayCitations(result.citations);
+  displayReasoningChain(result.reasoning_chain);
+  displayFollowUpSuggestions(result.follow_up_suggestions);
+  displayRelatedQueries(result.related_queries);
+
+  return result;
+}
+```
 
 ---
 
@@ -25,10 +130,20 @@ const traditionalRequest = {
   query_type: "legal_query"
 };
 
-// NEW: Enhanced request with optional parameter:
+// NEW: Enhanced request with optional parameters:
 const enhancedRequest = {
   query: "What are employment rights in Kenya?",
   use_enhanced_rag: true,  // 🆕 NEW: Enable enhanced features
+  agent_mode: false,       // 🆕 NEW: Enable intelligent agent mode
+  context: null,
+  query_type: "legal_query"
+};
+
+// 🤖 NEW: Intelligent Agent Mode request:
+const agentRequest = {
+  query: "What are employment rights in Kenya?",
+  use_enhanced_rag: true,  // Can be combined with agent mode
+  agent_mode: true,        // 🆕 NEW: Enable intelligent agent mode
   context: null,
   query_type: "legal_query"
 };
@@ -48,6 +163,25 @@ const enhancedResponse = {
   
   // 🆕 NEW Enhanced fields (optional):
   enhanced: true,           // Boolean: Was enhanced RAG used?
+
+  // 🤖 NEW Agent Mode fields (when agent_mode: true):
+  agent_mode: true,         // Boolean: Was agent mode used?
+  research_strategy: "comprehensive", // String: Research strategy used
+  reasoning_chain: [        // Array: Agent reasoning steps
+    "Initiating hybrid retrieval search",
+    "Applying intelligence enhancement",
+    "Intelligence enhancement completed"
+  ],
+  follow_up_suggestions: [  // Array: Intelligent follow-up suggestions
+    "What are the penalties for non-compliance with this law?",
+    "Are there any recent amendments to this legislation?",
+    "Can you provide more specific examples?"
+  ],
+  related_queries: [        // Array: Related queries for exploration
+    "What are the legal precedents for this issue?",
+    "How is this regulated under Kenyan law?",
+    "What are the procedural requirements?"
+  ],
   sources: [                // Array: Enhanced source information
     {
       title: "Constitution of Kenya, 2010",
@@ -114,9 +248,47 @@ async function queryEnhancedLegalAI(userQuery) {
 }
 ```
 
-### **Option 3: Progressive Enhancement (Recommended)**
+### **Option 3: Enable Intelligent Agent Mode**
 ```javascript
-// Smart approach: Try enhanced, fallback to traditional
+// 🤖 NEW: Use intelligent agent for comprehensive research
+async function queryWithAgent(userQuery) {
+  const response = await fetch('/counsel/query', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      query: userQuery,
+      use_enhanced_rag: true, // Enhanced RAG + Agent
+      agent_mode: true,       // 🆕 Enable intelligent agent
+      query_type: "legal_query"
+    })
+  });
+
+  const result = await response.json();
+
+  // 🤖 NEW: Handle agent-specific features
+  if (result.agent_mode) {
+    console.log('Research strategy:', result.research_strategy);
+    console.log('Reasoning chain:', result.reasoning_chain);
+    console.log('Follow-up suggestions:', result.follow_up_suggestions);
+    console.log('Related queries:', result.related_queries);
+
+    // Display follow-up suggestions to user
+    displayFollowUpSuggestions(result.follow_up_suggestions);
+
+    // Display related queries for exploration
+    displayRelatedQueries(result.related_queries);
+  }
+
+  return result;
+}
+```
+
+### **Option 4: Progressive Enhancement (Recommended)**
+```javascript
+// Smart approach: Try agent mode, fallback to enhanced, then traditional
 async function smartLegalQuery(userQuery) {
   try {
     // Try enhanced first

@@ -46,7 +46,7 @@
         },
         {
           "name": "SECRET_KEY",
-          "value": "DsMguwAf8OZ4iVy7h0ro7ICUx4A26fsMeVoQeY2GItI"
+          "value": "YOUR_SECRET_KEY_FOR_JWT"
         },
         {
           "name": "AWS_BEDROCK_MODEL_ID_FALLBACK",
