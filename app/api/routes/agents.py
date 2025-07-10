@@ -100,6 +100,44 @@ class AgentMemoryResponse(BaseModel):
 redis_url = getattr(settings, 'REDIS_URL', None)
 legal_research_agent = LegalResearchAgent(redis_url=redis_url)
 
+@router.get("/research")
+async def agent_research_info():
+    """
+    Get information about the LegalResearchAgent endpoint.
+    This endpoint provides details about the agent's capabilities and usage.
+    """
+    return {
+        "agent_name": "LegalResearchAgent",
+        "version": "1.0.0",
+        "description": "Advanced AI agent for legal research with multi-step reasoning",
+        "capabilities": [
+            "Multi-step legal reasoning (retrieve → summarize → synthesize → respond)",
+            "Confidence-based model fallbacks",
+            "Memory tracking with Redis",
+            "Citation management with source attribution",
+            "Agentic chaining for complex legal decision-making"
+        ],
+        "usage": {
+            "method": "POST",
+            "endpoint": "/agents/research",
+            "required_fields": ["query"],
+            "optional_fields": ["context", "max_iterations", "confidence_threshold"],
+            "example_request": {
+                "query": "What are the legal requirements for employment contracts in Kenya?",
+                "context": "employment law",
+                "max_iterations": 3,
+                "confidence_threshold": 0.8
+            }
+        },
+        "models": [
+            "Claude Sonnet 4 (Primary)",
+            "Claude 3.7 (Secondary)",
+            "Mistral Large (Fallback)"
+        ],
+        "status": "Production Ready",
+        "documentation": "See /docs for interactive API documentation"
+    }
+
 @router.post("/research", response_model=AgentResearchResponse)
 async def agent_research(
     request: AgentResearchRequest,
