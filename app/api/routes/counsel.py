@@ -9,6 +9,13 @@ from app.services.ai_service import AIService
 from app.services.mcp_service import MCPService
 from app.services.vector_service import VectorService
 from app.services.llm_manager import llm_manager
+
+# Enhanced RAG services (with fallback)
+try:
+    from app.services.advanced.legal_rag import LegalRAGService
+    HAS_ENHANCED_RAG = True
+except ImportError:
+    HAS_ENHANCED_RAG = False
 from app.database import get_db
 from app.models.user import User
 from app.models.query import Query
@@ -25,6 +32,7 @@ class LegalQueryRequest(BaseModel):
     query: str = Field(..., max_length=settings.MAX_QUERY_LENGTH)
     context: Optional[Dict[str, Any]] = None
     query_type: str = Field(default="legal_query")
+    use_enhanced_rag: bool = Field(default=True, description="Use enhanced RAG system (enabled by default for production)")
 
 class LegalQueryResponse(BaseModel):
     query_id: str
@@ -34,6 +42,10 @@ class LegalQueryResponse(BaseModel):
     model_used: str
     processing_time: float
     timestamp: datetime
+    # Enhanced RAG fields (optional)
+    enhanced: bool = Field(default=False, description="Whether enhanced RAG was used")
+    sources: Optional[List[Dict[str, Any]]] = Field(default=None, description="Enhanced source information")
+    retrieval_strategy: Optional[str] = Field(default=None, description="Retrieval strategy used")
 
 class DocumentGenerationRequest(BaseModel):
     document_type: str = Field(..., description="Type of document to generate")
@@ -102,8 +114,71 @@ async def ask_legal_question(
         db.commit()
         db.refresh(query_record)
         
-        # Process query using AI service
-        response = await ai_service.answer_legal_query(request.query, request.context)
+        # Try enhanced RAG first if available and requested
+        enhanced_used = False
+        enhanced_sources = None
+        retrieval_strategy = None
+
+        if request.use_enhanced_rag and HAS_ENHANCED_RAG:
+            try:
+                # Initialize enhanced RAG service
+                enhanced_rag = LegalRAGService()
+                await enhanced_rag.initialize()
+
+                # Use enhanced RAG
+                rag_response = await enhanced_rag.query_with_sources(
+                    query=request.query,
+                    max_sources=5,
+                    strategy="hybrid"
+                )
+
+                if rag_response.confidence_score > 0.3:  # Use enhanced response if confident
+                    response = {
+                        'answer': rag_response.response_text,
+                        'confidence': rag_response.confidence_score,
+                        'model_used': rag_response.model_used,
+                        'relevant_documents': []  # Will be populated from sources
+                    }
+
+                    # Convert enhanced sources to relevant documents format
+                    relevant_docs = []
+                    enhanced_sources = []
+
+                    for source in rag_response.sources:
+                        # For backward compatibility
+                        relevant_docs.append({
+                            'title': source.title,
+                            'content': source.excerpt,
+                            'source': source.source,
+                            'relevance_score': source.relevance_score
+                        })
+
+                        # For enhanced response
+                        enhanced_sources.append({
+                            'title': source.title,
+                            'citation': source.citation,
+                            'relevance_score': source.relevance_score,
+                            'url': source.url,
+                            'excerpt': source.excerpt,
+                            'document_type': source.document_type
+                        })
+
+                    response['relevant_documents'] = relevant_docs
+                    enhanced_used = True
+                    retrieval_strategy = rag_response.retrieval_strategy
+
+                    logger.info(f"Enhanced RAG used successfully for query: {request.query[:50]}...")
+                else:
+                    # Fall back to traditional approach
+                    logger.info("Enhanced RAG confidence too low, falling back to traditional approach")
+                    response = await ai_service.answer_legal_query(request.query, request.context)
+
+            except Exception as e:
+                logger.error(f"Enhanced RAG failed, falling back to traditional: {e}")
+                response = await ai_service.answer_legal_query(request.query, request.context)
+        else:
+            # Use traditional AI service
+            response = await ai_service.answer_legal_query(request.query, request.context)
         
         # Calculate processing time
         processing_time = (datetime.utcnow() - start_time).total_seconds()
@@ -126,7 +201,10 @@ async def ask_legal_question(
             confidence=response.get('confidence', 0.0),
             model_used=response.get('model_used', 'unknown'),
             processing_time=processing_time,
-            timestamp=datetime.utcnow()
+            timestamp=datetime.utcnow(),
+            enhanced=enhanced_used,
+            sources=enhanced_sources,
+            retrieval_strategy=retrieval_strategy
         )
         
     except Exception as e:
