@@ -15,6 +15,9 @@ import hashlib
 import pickle
 from functools import wraps
 
+# Set up logger
+logger = logging.getLogger(__name__)
+
 # Optional imports - these are heavy dependencies that may not be available
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
@@ -26,8 +29,7 @@ try:
     HAS_TRANSFORMERS = True
 except ImportError:
     HAS_TRANSFORMERS = False
-    logger = logging.getLogger(__name__)
-    logger.warning("Transformers not available, local models will be disabled")
+    logger.warning("Transformers not available - using AWS Bedrock only")
 
 try:
     from sentence_transformers import SentenceTransformer

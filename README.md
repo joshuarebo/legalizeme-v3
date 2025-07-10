@@ -41,7 +41,7 @@ LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedroc
 - **Multi-Strategy Retrieval**: Semantic, keyword, and hybrid search
 - **Comprehensive Monitoring**: Health checks and performance metrics
 
-### 📄 Multi-Modal Document Processing (NEW)
+### 📄 Multi-Modal Document Processing
 - **PDF Processing**: Advanced text extraction with pdfplumber + PyMuPDF fallback
 - **OCR Capabilities**: 94.8-95.5% accuracy on scanned legal documents (Tesseract v5.5.0)
 - **Document Classification**: 100% accuracy on legal document types (contracts, affidavits, judgments)
@@ -49,6 +49,16 @@ LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedroc
 - **Vector Integration**: Enhanced ChromaDB indexing with document chunking
 - **Structured Summarization**: Claude Sonnet 4 powered analysis with entity extraction
 - **Production Ready**: 100% test success rate with comprehensive validation
+
+### 🤖 LegalResearchAgent (NEW)
+- **Intelligent Legal Research**: Advanced agentic behavior for complex legal queries
+- **Multi-Step Reasoning**: Retrieve → Summarize → Synthesize → Respond workflow
+- **Confidence-Based Fallbacks**: Automatic model switching based on response quality
+- **Memory Tracking**: Redis-based conversation context and research history
+- **Citation Management**: Structured source attribution with confidence scores
+- **Chaining Logic**: Sequential reasoning for complex legal decision-making
+- **Agent Mode Toggle**: Available in `/counsel/query` with `agent_mode=true`
+- **Dedicated Endpoint**: `/agents/research` for specialized legal research tasks
 
 ## 📋 Prerequisites
 
@@ -255,27 +265,215 @@ docker run -p 8000:8000 --env-file .env legalizeme-counsel
 - **Swagger UI**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs`
 - **ReDoc**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/redoc`
 
-### Frontend Integration
-📋 **Complete Integration Guide**: See [`FRONTEND_INTEGRATION_GUIDE.md`](./FRONTEND_INTEGRATION_GUIDE.md)
+### 🎯 Frontend Integration Guide
 
+#### Base Configuration
 ```javascript
-// JavaScript integration example
 const API_BASE_URL = 'http://counsel-alb-694525771.us-east-1.elb.amazonaws.com';
-const response = await fetch(`${API_BASE_URL}/counsel/query-direct`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer your-jwt-token'
-  },
-  body: JSON.stringify({
-    query: 'What are employment rights in Kenya?',
-    model_preference: 'claude-sonnet-4'
-  })
-});
-
-const result = await response.json();
-console.log(result.response_text);
+const DEFAULT_HEADERS = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  'User-Agent': 'LegalizeMe-Frontend/1.0'
+};
 ```
+
+#### Core Legal Query Endpoint
+```javascript
+// Standard legal query
+const queryLegal = async (query, agentMode = false) => {
+  const response = await fetch(`${API_BASE_URL}/counsel/query`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS,
+    body: JSON.stringify({
+      query: query,
+      agent_mode: agentMode,
+      model_preference: 'claude-sonnet-4'
+    })
+  });
+  return await response.json();
+};
+
+// Usage examples
+const basicQuery = await queryLegal('What are employment rights in Kenya?');
+const agentQuery = await queryLegal('Analyze employment contract requirements', true);
+```
+
+#### 🤖 LegalResearchAgent Endpoint (NEW)
+```javascript
+// Advanced legal research with agentic behavior
+const researchLegal = async (query, context = null) => {
+  const response = await fetch(`${API_BASE_URL}/agents/research`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS,
+    body: JSON.stringify({
+      query: query,
+      context: context,
+      max_iterations: 3,
+      confidence_threshold: 0.8
+    })
+  });
+  return await response.json();
+};
+
+// Usage example
+const research = await researchLegal(
+  'What are the legal requirements for employment contracts in Kenya?',
+  'employment law'
+);
+```
+
+#### 📄 Multi-Modal Document Processing
+```javascript
+// Process PDF documents
+const processDocument = async (file) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('document_type', 'legal_document');
+
+  const response = await fetch(`${API_BASE_URL}/multimodal/process`, {
+    method: 'POST',
+    body: formData
+  });
+  return await response.json();
+};
+
+// Text-only processing
+const processText = async (text, documentType = 'contract') => {
+  const response = await fetch(`${API_BASE_URL}/documents/analyze`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS,
+    body: JSON.stringify({
+      text: text,
+      document_type: documentType
+    })
+  });
+  return await response.json();
+};
+```
+
+#### 🔍 Vector Search
+```javascript
+// Search legal documents
+const searchDocuments = async (query, limit = 5) => {
+  const response = await fetch(`${API_BASE_URL}/search/vector`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS,
+    body: JSON.stringify({
+      query: query,
+      limit: limit,
+      include_metadata: true
+    })
+  });
+  return await response.json();
+};
+```
+
+#### 🏥 Health Monitoring
+```javascript
+// Check API health
+const checkHealth = async () => {
+  const response = await fetch(`${API_BASE_URL}/health`, {
+    headers: DEFAULT_HEADERS
+  });
+  return await response.json();
+};
+
+// Live health check (for monitoring)
+const checkLiveHealth = async () => {
+  const response = await fetch(`${API_BASE_URL}/health/live`, {
+    headers: DEFAULT_HEADERS
+  });
+  return response.ok;
+};
+```
+
+#### 📋 Response Formats
+
+**Standard Legal Query Response:**
+```json
+{
+  "response_text": "Employment rights in Kenya are governed by...",
+  "confidence_score": 0.92,
+  "model_used": "claude-sonnet-4",
+  "sources": [
+    {
+      "title": "Employment Act 2007",
+      "url": "https://kenyalaw.org/...",
+      "relevance_score": 0.95
+    }
+  ],
+  "processing_time": 8.2,
+  "timestamp": "2025-07-10T18:45:00Z"
+}
+```
+
+**LegalResearchAgent Response:**
+```json
+{
+  "research_result": "Based on comprehensive analysis...",
+  "confidence_score": 0.89,
+  "reasoning_steps": [
+    "Retrieved relevant employment law documents",
+    "Analyzed contract requirements",
+    "Synthesized legal obligations"
+  ],
+  "sources": [...],
+  "agent_iterations": 2,
+  "final_model": "claude-sonnet-4",
+  "memory_context": "employment_contracts_2025"
+}
+```
+
+**Error Response:**
+```json
+{
+  "error": "Rate limit exceeded",
+  "error_code": "RATE_LIMIT_EXCEEDED",
+  "message": "Too many requests. Please try again in 60 seconds.",
+  "retry_after": 60
+}
+```
+
+#### ⚠️ Error Handling
+```javascript
+const handleApiCall = async (apiFunction) => {
+  try {
+    const response = await apiFunction();
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`API Error: ${errorData.message || response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API call failed:', error);
+
+    // Handle specific error types
+    if (error.message.includes('Rate limit')) {
+      // Show rate limit message to user
+      return { error: 'Please wait before making another request' };
+    }
+
+    if (error.message.includes('403')) {
+      // Security middleware blocked request
+      return { error: 'Request blocked by security policy' };
+    }
+
+    return { error: 'Service temporarily unavailable' };
+  }
+};
+```
+
+#### 🚀 Production Deployment Status
+- ✅ **API Base URL**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com`
+- ✅ **Health Endpoint**: `/health/live` (200 OK)
+- ✅ **Documentation**: `/docs` (Interactive Swagger UI)
+- ✅ **LegalResearchAgent**: `/agents/research` (Production Ready)
+- ✅ **Multi-Modal Processing**: `/multimodal/process` (PDF + OCR)
+- ✅ **Vector Search**: `/search/vector` (ChromaDB Integration)
+- ✅ **Security**: Rate limiting and request validation active
+- ✅ **Monitoring**: CloudWatch logs and health checks configured
 
 ## 🔒 Security
 
