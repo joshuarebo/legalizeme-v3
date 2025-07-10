@@ -34,10 +34,11 @@ LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedroc
 
 ### 🏗️ Production Architecture
 - **FastAPI Backend**: High-performance async API
-- **AWS Bedrock Integration**: Enterprise AI models
+- **Enhanced RAG System**: ChromaDB vector storage with source citations
+- **AWS Bedrock Integration**: Enterprise AI models with confidence scoring
 - **PostgreSQL Database**: Robust data persistence
 - **Redis Caching**: Sub-second response times
-- **ChromaDB Vector Store**: Semantic legal document search
+- **Multi-Strategy Retrieval**: Semantic, keyword, and hybrid search
 - **Comprehensive Monitoring**: Health checks and performance metrics
 
 ## 📋 Prerequisites
