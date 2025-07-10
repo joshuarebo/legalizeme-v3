@@ -414,17 +414,24 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             r'nmap'
         ]
         
-        # Allow legitimate bots (optional)
-        allowed_bots = [
+        # Allow legitimate bots and browsers
+        allowed_patterns = [
             'googlebot',
             'bingbot',
-            'slurp'
+            'slurp',
+            'mozilla',  # Most browsers include Mozilla in User-Agent
+            'chrome',
+            'firefox',
+            'safari',
+            'edge',
+            'opera',
+            'elb-healthchecker'  # AWS Load Balancer health checks
         ]
         
         user_agent_lower = user_agent.lower()
         
-        # Check if it's an allowed bot
-        for allowed in allowed_bots:
+        # Check if it's an allowed pattern (bots or browsers)
+        for allowed in allowed_patterns:
             if allowed in user_agent_lower:
                 return False
         
