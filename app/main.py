@@ -193,12 +193,12 @@ setup_middleware(app)
 
 # Include routers
 app.include_router(health.router, prefix="/health", tags=["health"])
-app.include_router(auth.router, prefix="/auth", tags=["authentication"])
-app.include_router(counsel.router, prefix="/counsel", tags=["counsel"])
-app.include_router(documents.router, prefix="/documents", tags=["documents"])
-app.include_router(models.router, prefix="/models", tags=["model-management"])
-app.include_router(agents.router, prefix="/agents", tags=["intelligent-agents"])
-app.include_router(multimodal.router, prefix="/multimodal", tags=["multimodal-processing"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(counsel.router, prefix="/api/v1/counsel", tags=["counsel"])
+app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
+app.include_router(models.router, prefix="/api/v1/models", tags=["model-management"])
+app.include_router(agents.router, prefix="/api/v1/agents", tags=["intelligent-agents"])
+app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["multimodal-processing"])
 
 @app.get("/")
 async def root():

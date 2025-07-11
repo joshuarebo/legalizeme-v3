@@ -1,0 +1,248 @@
+name: "Corporate Compliance Analysis"
+category: "corporate_law"
+version: "1.0.0"
+description: "Comprehensive template for corporate compliance and governance under Kenyan company law"
+
+user_goal: "Ensure corporate compliance with Kenyan company law and regulatory requirements"
+
+input_requirements:
+  required:
+    - company_details: "Company name, registration number, and type"
+    - compliance_area: "Specific compliance area or requirement"
+    - current_status: "Current compliance status or issue"
+  optional:
+    - company_documents: "Articles, memorandum, board resolutions"
+    - regulatory_correspondence: "Communications with regulators"
+    - financial_information: "Financial statements or reports"
+    - timeline: "Timeline for compliance requirements"
+
+tools_needed:
+  primary:
+    - "companies_act_search"
+    - "regulatory_database"
+    - "compliance_checker"
+  secondary:
+    - "document_analyzer"
+    - "precedent_search"
+    - "filing_calculator"
+
+domain_context:
+  primary_law: "Companies Act 2015"
+  related_laws:
+    - "Capital Markets Act (CAP 485A)"
+    - "Banking Act (CAP 488)"
+    - "Insurance Act (CAP 487)"
+    - "Competition Act 2010"
+    - "Public Procurement and Asset Disposal Act 2015"
+    - "Anti-Corruption and Economic Crimes Act"
+  regulatory_bodies:
+    - "Registrar of Companies"
+    - "Capital Markets Authority"
+    - "Central Bank of Kenya"
+    - "Insurance Regulatory Authority"
+    - "Competition Authority of Kenya"
+  key_concepts:
+    - "Corporate governance principles"
+    - "Directors' duties and liabilities"
+    - "Shareholder rights and protection"
+    - "Financial reporting requirements"
+    - "Regulatory filing obligations"
+    - "Corporate restructuring procedures"
+    - "Insolvency and winding up"
+
+analysis_framework:
+  step_1:
+    name: "Company Classification"
+    description: "Identify company type and applicable regulations"
+    company_types:
+      - "Private company limited by shares"
+      - "Public company limited by shares"
+      - "Company limited by guarantee"
+      - "Unlimited company"
+      - "Foreign company"
+    regulatory_scope:
+      - "General Companies Act requirements"
+      - "Sector-specific regulations"
+      - "Listed company obligations"
+      - "Foreign investment rules"
+  
+  step_2:
+    name: "Compliance Mapping"
+    description: "Map applicable compliance requirements"
+    compliance_categories:
+      - "Incorporation and registration"
+      - "Corporate governance"
+      - "Financial reporting"
+      - "Regulatory filings"
+      - "Tax obligations"
+      - "Employment compliance"
+      - "Environmental requirements"
+  
+  step_3:
+    name: "Gap Analysis"
+    description: "Identify compliance gaps and risks"
+    assessment_areas:
+      - "Statutory filing status"
+      - "Governance structure adequacy"
+      - "Director qualification and duties"
+      - "Shareholder rights protection"
+      - "Financial reporting accuracy"
+      - "Regulatory relationship management"
+  
+  step_4:
+    name: "Remediation Planning"
+    description: "Develop compliance improvement plan"
+    remediation_elements:
+      - "Immediate corrective actions"
+      - "System and process improvements"
+      - "Training and awareness programs"
+      - "Ongoing monitoring mechanisms"
+
+expected_outputs:
+  compliance_assessment:
+    format: "Comprehensive compliance status report"
+    sections:
+      - "Current compliance status"
+      - "Identified gaps and risks"
+      - "Regulatory requirements summary"
+      - "Remediation recommendations"
+      - "Implementation timeline"
+  
+  legal_obligations:
+    format: "Clear statement of legal duties"
+    include:
+      - "Statutory filing requirements"
+      - "Governance obligations"
+      - "Director and officer duties"
+      - "Shareholder rights"
+      - "Regulatory reporting"
+  
+  action_plan:
+    format: "Practical implementation roadmap"
+    include:
+      - "Priority actions"
+      - "Resource requirements"
+      - "Timeline and milestones"
+      - "Monitoring and review"
+
+confidence_criteria:
+  high_confidence:
+    - "Standard compliance requirements"
+    - "Clear statutory provisions"
+    - "Established regulatory practice"
+  
+  medium_confidence:
+    - "Complex regulatory framework"
+    - "Evolving compliance standards"
+    - "Multi-jurisdictional issues"
+  
+  low_confidence:
+    - "Novel regulatory issues"
+    - "Conflicting regulatory guidance"
+    - "Pending legislative changes"
+
+common_scenarios:
+  annual_compliance:
+    description: "Annual filing and reporting requirements"
+    key_requirements:
+      - "Annual returns filing"
+      - "Financial statements submission"
+      - "Tax compliance certificates"
+      - "Regulatory license renewals"
+  
+  governance_compliance:
+    description: "Corporate governance and board matters"
+    key_areas:
+      - "Board composition and independence"
+      - "Committee structures"
+      - "Director appointment procedures"
+      - "Conflict of interest management"
+  
+  transaction_compliance:
+    description: "Compliance for corporate transactions"
+    key_considerations:
+      - "Merger and acquisition approvals"
+      - "Share transfer procedures"
+      - "Related party transactions"
+      - "Foreign investment notifications"
+  
+  regulatory_investigations:
+    description: "Responding to regulatory inquiries"
+    key_actions:
+      - "Information gathering and preservation"
+      - "Regulatory cooperation"
+      - "Legal privilege protection"
+      - "Remediation planning"
+
+escalation_triggers:
+  - "Criminal law implications"
+  - "Regulatory enforcement actions"
+  - "Shareholder disputes"
+  - "Insolvency proceedings"
+  - "Cross-border regulatory issues"
+
+quality_checks:
+  - "Companies Act compliance verified"
+  - "Regulatory requirements current"
+  - "Filing deadlines identified"
+  - "Risk assessment comprehensive"
+  - "Action plan practical"
+
+template_prompts:
+  general_compliance: |
+    Assess corporate compliance for the following company:
+    
+    Company: {company_details}
+    Compliance Area: {compliance_area}
+    Current Status: {current_status}
+    
+    Provide comprehensive analysis covering:
+    1. Applicable legal and regulatory requirements
+    2. Current compliance status assessment
+    3. Identified gaps and risks
+    4. Remediation recommendations
+    5. Implementation timeline and priorities
+    
+    Apply the Companies Act 2015 and relevant regulations.
+  
+  governance_review: |
+    Review corporate governance compliance:
+    
+    Company Details: {company_details}
+    Governance Documents: {company_documents}
+    Specific Issues: {compliance_area}
+    
+    Assess:
+    1. Board composition and effectiveness
+    2. Director duties and responsibilities
+    3. Shareholder rights protection
+    4. Governance policy adequacy
+    5. Compliance monitoring systems
+  
+  filing_compliance: |
+    Evaluate statutory filing compliance:
+    
+    Company: {company_details}
+    Filing Requirements: {compliance_area}
+    Current Status: {current_status}
+    
+    Review:
+    1. Outstanding filing obligations
+    2. Filing deadlines and penalties
+    3. Document preparation requirements
+    4. Regulatory submission procedures
+    5. Ongoing compliance calendar
+  
+  transaction_compliance: |
+    Assess transaction compliance requirements:
+    
+    Company: {company_details}
+    Transaction Details: {compliance_area}
+    Regulatory Context: {current_status}
+    
+    Analyze:
+    1. Required approvals and consents
+    2. Disclosure obligations
+    3. Regulatory notification requirements
+    4. Compliance timeline
+    5. Risk mitigation strategies

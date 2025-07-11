@@ -1,0 +1,239 @@
+name: "Lease Agreement Analysis"
+category: "property_law"
+version: "1.0.0"
+description: "Comprehensive template for lease agreement matters under Kenyan property law"
+
+user_goal: "Understand lease rights, obligations, and disputes under Kenyan landlord and tenant law"
+
+input_requirements:
+  required:
+    - lease_document: "Lease agreement or tenancy document"
+    - property_details: "Property description and location"
+    - parties_involved: "Landlord and tenant details"
+  optional:
+    - dispute_description: "Description of any lease dispute"
+    - payment_records: "Rent payment history"
+    - correspondence: "Communications between parties"
+    - property_condition: "Property condition reports"
+
+tools_needed:
+  primary:
+    - "property_law_database"
+    - "lease_analyzer"
+    - "document_parser"
+  secondary:
+    - "rent_calculator"
+    - "legal_precedent_search"
+    - "statutory_search"
+
+domain_context:
+  primary_law: "Landlord and Tenant (Shops, Hotels and Catering Establishments) Act (CAP 301)"
+  related_laws:
+    - "Rent Restriction Act (CAP 296)"
+    - "Distress for Rent Act (CAP 293)"
+    - "Registration of Documents Act (CAP 285)"
+    - "Land Act 2012"
+    - "Land Registration Act 2012"
+  key_concepts:
+    - "Types of tenancy (periodic, fixed-term, at-will)"
+    - "Rent control and fair rent"
+    - "Security of tenure"
+    - "Landlord's obligations (repairs, quiet enjoyment)"
+    - "Tenant's obligations (rent, care of property)"
+    - "Termination and notice requirements"
+    - "Distress for rent procedures"
+    - "Subletting and assignment"
+
+analysis_framework:
+  step_1:
+    name: "Tenancy Classification"
+    description: "Determine type and nature of tenancy"
+    classification_factors:
+      - "Duration and terms"
+      - "Rent payment frequency"
+      - "Notice requirements"
+      - "Statutory protection applicable"
+      - "Commercial vs residential"
+  
+  step_2:
+    name: "Rights and Obligations Analysis"
+    description: "Identify parties' rights and duties"
+    landlord_obligations:
+      - "Provide quiet enjoyment"
+      - "Maintain structural repairs"
+      - "Comply with health and safety"
+      - "Respect tenant's privacy"
+    tenant_obligations:
+      - "Pay rent punctually"
+      - "Use property properly"
+      - "Allow landlord access"
+      - "Return property in good condition"
+  
+  step_3:
+    name: "Compliance Assessment"
+    description: "Check compliance with statutory requirements"
+    compliance_areas:
+      - "Rent control provisions"
+      - "Notice requirements"
+      - "Deposit regulations"
+      - "Health and safety standards"
+      - "Registration requirements"
+  
+  step_4:
+    name: "Dispute Resolution"
+    description: "Identify resolution mechanisms"
+    resolution_options:
+      - "Negotiation and mediation"
+      - "Rent Tribunal proceedings"
+      - "Magistrate's Court action"
+      - "High Court proceedings"
+
+expected_outputs:
+  tenancy_analysis:
+    format: "Comprehensive lease relationship analysis"
+    sections:
+      - "Tenancy type and classification"
+      - "Rights and obligations matrix"
+      - "Statutory compliance status"
+      - "Risk assessment"
+      - "Recommended actions"
+  
+  legal_position:
+    format: "Clear statement of legal rights"
+    include:
+      - "Security of tenure status"
+      - "Rent review mechanisms"
+      - "Termination rights"
+      - "Remedy options"
+  
+  practical_guidance:
+    format: "Step-by-step recommendations"
+    include:
+      - "Notice requirements"
+      - "Procedural compliance"
+      - "Documentation needs"
+      - "Timeline considerations"
+
+confidence_criteria:
+  high_confidence:
+    - "Standard lease terms"
+    - "Clear statutory provisions"
+    - "Established case law"
+  
+  medium_confidence:
+    - "Unusual lease arrangements"
+    - "Ambiguous terms"
+    - "Limited precedents"
+  
+  low_confidence:
+    - "Novel legal issues"
+    - "Conflicting authorities"
+    - "Complex factual disputes"
+
+common_scenarios:
+  rent_disputes:
+    description: "Disputes over rent payment and increases"
+    key_issues:
+      - "Rent arrears and recovery"
+      - "Fair rent determination"
+      - "Rent increase validity"
+      - "Service charge disputes"
+  
+  possession_proceedings:
+    description: "Landlord seeking to recover possession"
+    key_issues:
+      - "Grounds for possession"
+      - "Notice requirements"
+      - "Security of tenure rights"
+      - "Compensation entitlements"
+  
+  repair_disputes:
+    description: "Disputes over property maintenance"
+    key_issues:
+      - "Repair obligations allocation"
+      - "Standard of repairs required"
+      - "Access for repairs"
+      - "Compensation for disrepair"
+  
+  lease_renewal:
+    description: "Lease renewal and continuation"
+    key_issues:
+      - "Statutory renewal rights"
+      - "Terms of new lease"
+      - "Rent review mechanisms"
+      - "Landlord's opposition grounds"
+
+escalation_triggers:
+  - "Constitutional property rights issues"
+  - "Discrimination claims"
+  - "Criminal law implications"
+  - "Planning and development disputes"
+  - "Environmental health matters"
+
+quality_checks:
+  - "Landlord and Tenant Act compliance"
+  - "Rent control provisions considered"
+  - "Notice requirements verified"
+  - "Procedural fairness assessed"
+  - "Practical implications addressed"
+
+template_prompts:
+  general_analysis: |
+    Analyze the following lease matter under Kenyan property law:
+    
+    Lease Document: {lease_document}
+    Property: {property_details}
+    Parties: {parties_involved}
+    Issue: {dispute_description}
+    
+    Provide analysis covering:
+    1. Tenancy classification and terms
+    2. Rights and obligations of parties
+    3. Statutory compliance assessment
+    4. Available remedies and procedures
+    5. Practical recommendations
+    
+    Apply the Landlord and Tenant Act and relevant legislation.
+  
+  rent_dispute: |
+    Assess the rent dispute:
+    
+    Lease Terms: {lease_document}
+    Dispute Details: {dispute_description}
+    Payment History: {payment_records}
+    
+    Analyze:
+    1. Rent payment obligations
+    2. Arrears calculation and validity
+    3. Recovery procedures available
+    4. Tenant's defenses and rights
+    5. Settlement options
+  
+  possession_claim: |
+    Evaluate possession proceedings:
+    
+    Lease Agreement: {lease_document}
+    Grounds Claimed: {dispute_description}
+    Property Details: {property_details}
+    
+    Assess:
+    1. Validity of possession grounds
+    2. Notice requirements compliance
+    3. Security of tenure protection
+    4. Procedural requirements
+    5. Tenant's rights and defenses
+  
+  lease_interpretation: |
+    Interpret lease terms and obligations:
+    
+    Lease Clauses: {lease_document}
+    Disputed Terms: {dispute_description}
+    
+    Apply interpretation principles:
+    1. Plain meaning of terms
+    2. Contextual interpretation
+    3. Statutory implied terms
+    4. Common law principles
+    5. Custom and practice
+    
+    Provide clear interpretation with legal basis.

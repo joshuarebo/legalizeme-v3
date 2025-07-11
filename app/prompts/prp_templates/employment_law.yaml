@@ -1,0 +1,219 @@
+name: "Employment Law Analysis"
+category: "employment_law"
+version: "1.0.0"
+description: "Comprehensive template for employment law matters in Kenya"
+
+user_goal: "Understand employment rights, obligations, and legal compliance under Kenyan employment law"
+
+input_requirements:
+  required:
+    - employment_scenario: "Description of the employment situation or dispute"
+    - parties_involved: "Employer and employee details"
+  optional:
+    - employment_contract: "Employment contract document (PDF/text)"
+    - relevant_policies: "Company policies or procedures"
+    - timeline: "Timeline of events"
+    - specific_question: "Specific legal question or concern"
+
+tools_needed:
+  primary:
+    - "employment_act_search"
+    - "labor_relations_db"
+    - "legal_database"
+  secondary:
+    - "document_analyzer"
+    - "employment_calculator"
+    - "precedent_analyzer"
+
+domain_context:
+  primary_law: "Employment Act 2007 (CAP 226)"
+  related_laws:
+    - "Labour Relations Act 2007"
+    - "Work Injury Benefits Act 2007"
+    - "Occupational Safety and Health Act 2007"
+    - "National Social Security Fund Act"
+  key_concepts:
+    - "Contract of service vs contract for service"
+    - "Probationary period (maximum 6 months)"
+    - "Notice periods and termination"
+    - "Maternity and paternity leave"
+    - "PAYE and statutory deductions"
+    - "Unfair dismissal and remedies"
+    - "Collective bargaining agreements"
+
+analysis_framework:
+  step_1:
+    name: "Relationship Classification"
+    description: "Determine if relationship is employment or independent contractor"
+    key_factors:
+      - "Control and supervision"
+      - "Integration into business"
+      - "Economic reality test"
+      - "Mutuality of obligation"
+  
+  step_2:
+    name: "Contract Analysis"
+    description: "Review employment contract terms and conditions"
+    focus_areas:
+      - "Job description and duties"
+      - "Remuneration and benefits"
+      - "Working hours and overtime"
+      - "Leave entitlements"
+      - "Termination clauses"
+      - "Restrictive covenants"
+  
+  step_3:
+    name: "Statutory Compliance"
+    description: "Assess compliance with Employment Act requirements"
+    compliance_areas:
+      - "Minimum wage compliance"
+      - "Working time regulations"
+      - "Health and safety obligations"
+      - "Anti-discrimination provisions"
+      - "Maternity/paternity rights"
+      - "Termination procedures"
+  
+  step_4:
+    name: "Dispute Resolution"
+    description: "Identify available remedies and procedures"
+    resolution_paths:
+      - "Internal grievance procedures"
+      - "Labour Officer mediation"
+      - "Employment and Labour Relations Court"
+      - "Industrial Court jurisdiction"
+
+expected_outputs:
+  legal_assessment:
+    format: "Structured analysis with clear conclusions"
+    sections:
+      - "Employment relationship status"
+      - "Rights and obligations analysis"
+      - "Compliance assessment"
+      - "Risk identification"
+      - "Recommended actions"
+  
+  statutory_references:
+    format: "Specific section citations with explanations"
+    include:
+      - "Employment Act sections"
+      - "Relevant case law"
+      - "Labour Relations Act provisions"
+      - "Regulatory requirements"
+  
+  practical_guidance:
+    format: "Step-by-step recommendations"
+    include:
+      - "Immediate actions required"
+      - "Documentation needs"
+      - "Timeline considerations"
+      - "Cost implications"
+      - "Professional advice recommendations"
+
+confidence_criteria:
+  high_confidence:
+    - "Clear statutory provisions apply"
+    - "Well-established case law exists"
+    - "Standard employment scenarios"
+  
+  medium_confidence:
+    - "Some ambiguity in law application"
+    - "Limited case law precedent"
+    - "Complex factual scenarios"
+  
+  low_confidence:
+    - "Novel legal issues"
+    - "Conflicting authorities"
+    - "Insufficient factual information"
+
+common_scenarios:
+  termination_disputes:
+    description: "Wrongful or unfair dismissal claims"
+    key_issues:
+      - "Notice period compliance"
+      - "Fair procedure followed"
+      - "Valid reasons for termination"
+      - "Severance pay calculations"
+    
+  wage_disputes:
+    description: "Salary, overtime, and benefit disputes"
+    key_issues:
+      - "Minimum wage compliance"
+      - "Overtime calculations"
+      - "Deduction legality"
+      - "Benefit entitlements"
+  
+  discrimination_claims:
+    description: "Workplace discrimination and harassment"
+    key_issues:
+      - "Protected characteristics"
+      - "Direct vs indirect discrimination"
+      - "Harassment definitions"
+      - "Employer liability"
+  
+  contract_disputes:
+    description: "Employment contract interpretation"
+    key_issues:
+      - "Terms and conditions"
+      - "Variation procedures"
+      - "Restrictive covenants"
+      - "Garden leave provisions"
+
+escalation_triggers:
+  - "Criminal law implications"
+  - "Constitutional rights violations"
+  - "Complex multi-party disputes"
+  - "International employment issues"
+  - "Collective bargaining matters"
+
+quality_checks:
+  - "Employment Act compliance verified"
+  - "Case law precedents cited"
+  - "Practical implications addressed"
+  - "Timeline and procedures clear"
+  - "Cost implications considered"
+
+template_prompts:
+  analysis_prompt: |
+    Analyze the following employment law matter under Kenyan jurisdiction:
+    
+    Scenario: {employment_scenario}
+    Parties: {parties_involved}
+    Specific Question: {specific_question}
+    
+    Apply the Employment Act 2007 and related legislation to provide:
+    1. Legal relationship classification
+    2. Rights and obligations analysis
+    3. Statutory compliance assessment
+    4. Available remedies and procedures
+    5. Practical recommendations
+    
+    Cite specific statutory provisions and relevant case law.
+  
+  compliance_prompt: |
+    Assess compliance with Kenyan employment law for:
+    
+    Employment Situation: {employment_scenario}
+    Contract Terms: {employment_contract}
+    
+    Review compliance with:
+    - Employment Act 2007 requirements
+    - Labour Relations Act provisions
+    - Health and safety obligations
+    - Anti-discrimination laws
+    
+    Identify any compliance gaps and recommend corrective actions.
+  
+  termination_prompt: |
+    Analyze the termination scenario under Kenyan employment law:
+    
+    Termination Details: {employment_scenario}
+    Timeline: {timeline}
+    
+    Assess:
+    1. Validity of termination reasons
+    2. Procedural fairness compliance
+    3. Notice period requirements
+    4. Severance pay entitlements
+    5. Potential unfair dismissal claims
+    
+    Provide specific Employment Act section references.

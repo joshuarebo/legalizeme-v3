@@ -1,0 +1,208 @@
+benchmark_set: "GAIA Legal Benchmarks - Level 3 (Advanced)"
+level: 3
+description: "Advanced legal questions requiring complex analysis, synthesis of multiple legal areas, and sophisticated reasoning"
+difficulty: "advanced"
+expected_completion_time: "5-10 minutes"
+
+cases:
+  - id: "L3_MULTI_001"
+    category: "multi_domain"
+    title: "Complex Employment Contract Dispute with Corporate Governance Issues"
+    question: "A senior executive of a listed company was dismissed for alleged misconduct. The executive claims the dismissal was to prevent disclosure of board irregularities and seeks reinstatement. The company argues the executive breached fiduciary duties. Analyze all legal issues including employment law, corporate governance, and potential whistleblower protection."
+    context: "Multi-faceted legal dispute involving employment, corporate, and regulatory law."
+    
+    ground_truth:
+      answer: "This case involves multiple legal areas: (1) Employment law - unfair dismissal analysis considering procedural fairness and substantive grounds; (2) Corporate governance - director's fiduciary duties and board accountability; (3) Whistleblower protection - potential protection under various acts; (4) Listed company obligations - disclosure and governance requirements. The executive may have protection if disclosure relates to legal violations."
+      legal_basis: "Employment Act 2007; Companies Act 2015; Capital Markets Act; Whistleblower Protection Act; common law fiduciary duties"
+      explanation: "Complex cases require analysis across multiple legal domains, considering interactions between different legal frameworks and potential conflicts of law."
+      confidence_threshold: 0.7
+    
+    evaluation_criteria:
+      required_elements:
+        - "employment law" or "unfair dismissal"
+        - "corporate governance" or "fiduciary duties"
+        - "whistleblower" or "disclosure protection"
+        - "listed company" or "regulatory obligations"
+      
+      analysis_components:
+        - "identifies multiple legal areas"
+        - "analyzes employment dismissal issues"
+        - "considers corporate governance aspects"
+        - "addresses whistleblower protection"
+        - "recognizes regulatory implications"
+      
+      legal_reasoning:
+        - "synthesizes multiple legal frameworks"
+        - "identifies potential conflicts"
+        - "balances competing interests"
+        - "considers policy implications"
+    
+    tools_expected:
+      - "employment_act_search"
+      - "companies_act_search"
+      - "regulatory_database"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "multi_domain_analysis"
+      - "competing_legal_frameworks"
+      - "policy_considerations"
+      - "regulatory_complexity"
+
+  - id: "L3_CON_001"
+    category: "contract_law"
+    title: "International Contract with Force Majeure and Frustration Issues"
+    question: "A Kenyan company contracted to supply goods to a European buyer. Due to COVID-19 restrictions, supply chains were disrupted, costs increased by 300%, and delivery became impossible for 8 months. The contract has a force majeure clause but doesn't specifically mention pandemics. Analyze the legal position considering force majeure, frustration of contract, and international commercial law principles."
+    context: "Complex contract law case involving force majeure, frustration, and international elements."
+    
+    ground_truth:
+      answer: "Analysis requires examining: (1) Force majeure clause interpretation - whether COVID-19 falls within existing terms; (2) Frustration doctrine - whether performance became impossible/radically different; (3) International commercial law - CISG application and international arbitration; (4) Remedies - suspension, termination, or renegotiation. The 300% cost increase and 8-month delay suggest frustration, but force majeure clause may limit this."
+      legal_basis: "Law of Contract Act (CAP 23); CISG; international commercial law principles; force majeure and frustration doctrines"
+      explanation: "International contracts require analysis of multiple legal systems, international conventions, and commercial law principles, particularly regarding unforeseen circumstances."
+      confidence_threshold: 0.65
+    
+    evaluation_criteria:
+      required_elements:
+        - "force majeure"
+        - "frustration"
+        - "international" or "CISG"
+        - "impossibility" or "radical change"
+      
+      analysis_components:
+        - "analyzes force majeure clause"
+        - "considers frustration doctrine"
+        - "addresses international law aspects"
+        - "evaluates remedies available"
+        - "considers commercial implications"
+      
+      legal_reasoning:
+        - "balances multiple legal doctrines"
+        - "considers international law hierarchy"
+        - "analyzes commercial reasonableness"
+        - "weighs policy considerations"
+    
+    tools_expected:
+      - "contract_analyzer"
+      - "international_law_database"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "international_law_elements"
+      - "multiple_legal_doctrines"
+      - "commercial_policy_analysis"
+      - "unprecedented_circumstances"
+
+  - id: "L3_PROP_001"
+    category: "property_law"
+    title: "Complex Land Dispute with Constitutional and Customary Law Issues"
+    question: "A community claims customary land rights over property that was later registered under the Land Registration Act to a private developer. The community argues their constitutional rights to ancestral land are violated. The developer claims legitimate title through proper registration. Analyze the competing claims considering constitutional law, customary law, and statutory land law."
+    context: "Multi-layered land dispute involving constitutional rights, customary law, and statutory registration."
+    
+    ground_truth:
+      answer: "This involves: (1) Constitutional analysis - Article 60 on land principles and community land rights; (2) Customary law - recognition of traditional land tenure systems; (3) Land Registration Act - indefeasibility of title vs. prior rights; (4) Community Land Act - protection of community land rights; (5) Balancing competing interests - individual property rights vs. community rights. Constitutional supremacy may favor community rights if properly established."
+      legal_basis: "Constitution of Kenya 2010, Articles 60-68; Land Act 2012; Community Land Act 2016; Land Registration Act 2012; customary law"
+      explanation: "Land disputes involving customary rights require constitutional analysis, recognition of customary law, and balancing with statutory registration systems."
+      confidence_threshold: 0.65
+    
+    evaluation_criteria:
+      required_elements:
+        - "constitutional" or "Article 60"
+        - "customary law" or "traditional"
+        - "community land" or "ancestral"
+        - "registration" or "title"
+      
+      analysis_components:
+        - "analyzes constitutional land principles"
+        - "considers customary law recognition"
+        - "examines registration system"
+        - "balances competing rights"
+        - "considers remedies available"
+      
+      legal_reasoning:
+        - "applies constitutional supremacy"
+        - "integrates multiple legal systems"
+        - "balances individual vs. community rights"
+        - "considers historical context"
+    
+    tools_expected:
+      - "constitutional_database"
+      - "land_law_database"
+      - "customary_law_database"
+      - "legal_reasoner"
+    
+    complexity_factors:
+      - "constitutional_law_analysis"
+      - "customary_law_integration"
+      - "competing_legal_systems"
+      - "historical_injustice_considerations"
+
+  - id: "L3_CORP_001"
+    category: "corporate_law"
+    title: "Complex Corporate Restructuring with Regulatory and Tax Implications"
+    question: "A multinational corporation wants to restructure its Kenyan operations through a scheme of arrangement, involving transfer of assets, employee transfers, and creation of new subsidiaries. Analyze the legal requirements considering Companies Act procedures, regulatory approvals, tax implications, employment law issues, and competition law clearances."
+    context: "Complex corporate restructuring requiring multi-regulatory analysis."
+    
+    ground_truth:
+      answer: "Comprehensive analysis requires: (1) Companies Act - scheme of arrangement procedures, court approval, creditor/shareholder meetings; (2) Regulatory approvals - sector-specific licenses, foreign investment approvals; (3) Tax implications - transfer pricing, stamp duty, capital gains; (4) Employment law - TUPE-equivalent protections, consultation requirements; (5) Competition law - merger control thresholds and approvals. Each area has specific procedures and timelines that must be coordinated."
+      legal_basis: "Companies Act 2015; Competition Act 2010; Income Tax Act; Employment Act 2007; various sector-specific regulations"
+      explanation: "Corporate restructuring involves multiple regulatory regimes with overlapping requirements and potential conflicts that must be carefully managed."
+      confidence_threshold: 0.6
+    
+    evaluation_criteria:
+      required_elements:
+        - "scheme of arrangement"
+        - "regulatory approvals"
+        - "tax implications"
+        - "employment" or "TUPE"
+        - "competition law"
+      
+      analysis_components:
+        - "outlines scheme procedures"
+        - "identifies regulatory requirements"
+        - "considers tax implications"
+        - "addresses employment issues"
+        - "analyzes competition aspects"
+      
+      legal_reasoning:
+        - "coordinates multiple regulatory regimes"
+        - "identifies potential conflicts"
+        - "sequences approval processes"
+        - "considers commercial objectives"
+    
+    tools_expected:
+      - "companies_act_search"
+      - "regulatory_database"
+      - "tax_database"
+      - "competition_database"
+      - "legal_reasoner"
+    
+    complexity_factors:
+      - "multi_regulatory_coordination"
+      - "procedural_complexity"
+      - "commercial_structuring"
+      - "cross_border_elements"
+
+evaluation_settings:
+  passing_score: 0.7
+  time_limit_seconds: 600
+  required_confidence: 0.6
+  
+  scoring_weights:
+    accuracy: 0.3
+    completeness: 0.25
+    legal_reasoning: 0.3
+    citation_quality: 0.15
+  
+  benchmark_criteria:
+    excellent: 0.8
+    good: 0.7
+    satisfactory: 0.6
+    needs_improvement: 0.5
+  
+  advanced_evaluation_criteria:
+    synthesis_quality: 0.2
+    policy_awareness: 0.15
+    practical_implications: 0.15
+    international_perspective: 0.1

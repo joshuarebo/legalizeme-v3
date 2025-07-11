@@ -1,0 +1,223 @@
+benchmark_set: "GAIA Legal Benchmarks - Level 2 (Intermediate)"
+level: 2
+description: "Intermediate legal questions requiring analysis, application of multiple legal principles, and reasoning"
+difficulty: "intermediate"
+expected_completion_time: "2-5 minutes"
+
+cases:
+  - id: "L2_EMP_001"
+    category: "employment_law"
+    title: "Unfair Dismissal Analysis"
+    question: "An employee was dismissed without notice after 2 years of service for alleged poor performance, but no formal performance management process was followed. Analyze whether this constitutes unfair dismissal under Kenyan law."
+    context: "Employee dismissal scenario requiring analysis of procedural fairness and substantive grounds."
+    
+    ground_truth:
+      answer: "This likely constitutes unfair dismissal due to procedural unfairness. While poor performance can be a valid ground for dismissal, the employer must follow fair procedures including performance management, warnings, and opportunity to improve."
+      legal_basis: "Employment Act 2007, Sections 41-45; Labour Relations Act 2007"
+      explanation: "Unfair dismissal occurs when dismissal is procedurally or substantively unfair. Here, the lack of formal performance management process and failure to give warnings violates procedural fairness requirements."
+      confidence_threshold: 0.75
+    
+    evaluation_criteria:
+      required_elements:
+        - "unfair dismissal" or "unfair"
+        - "procedural" or "procedure"
+        - "performance management" or "warnings"
+        - "fair process" or "due process"
+      
+      analysis_components:
+        - "identifies procedural unfairness"
+        - "recognizes performance as potential valid ground"
+        - "explains requirement for fair procedure"
+        - "mentions opportunity to improve"
+      
+      legal_reasoning:
+        - "distinguishes procedural vs substantive fairness"
+        - "applies Employment Act provisions"
+        - "considers employee's length of service"
+    
+    tools_expected:
+      - "employment_act_search"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "multi_step_analysis"
+      - "procedural_vs_substantive"
+      - "balancing_competing_interests"
+
+  - id: "L2_CON_001"
+    category: "contract_law"
+    title: "Contract Interpretation with Ambiguous Terms"
+    question: "A supply contract states goods must be delivered 'promptly' but doesn't specify a timeframe. The supplier delivered after 3 weeks, and the buyer claims breach. How should 'promptly' be interpreted under Kenyan contract law?"
+    context: "Contract interpretation case involving ambiguous terms and commercial context."
+    
+    ground_truth:
+      answer: "The term 'promptly' should be interpreted based on the nature of goods, industry practice, and commercial context. 3 weeks may or may not be prompt depending on these factors. Courts apply the reasonable person test and consider surrounding circumstances."
+      legal_basis: "Law of Contract Act (CAP 23); interpretation principles from case law"
+      explanation: "Ambiguous terms are interpreted using: (1) plain meaning rule, (2) contextual interpretation, (3) business efficacy test, (4) industry custom and practice, and (5) reasonable person standard."
+      confidence_threshold: 0.7
+    
+    evaluation_criteria:
+      required_elements:
+        - "interpretation" or "interpret"
+        - "context" or "circumstances"
+        - "reasonable" or "reasonableness"
+        - "industry" or "commercial"
+      
+      analysis_components:
+        - "identifies ambiguity issue"
+        - "applies interpretation principles"
+        - "considers commercial context"
+        - "mentions industry practice"
+      
+      legal_reasoning:
+        - "uses multiple interpretation methods"
+        - "balances competing interpretations"
+        - "considers practical implications"
+    
+    tools_expected:
+      - "contract_analyzer"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "ambiguous_language"
+      - "multiple_interpretation_methods"
+      - "commercial_context_analysis"
+
+  - id: "L2_PROP_001"
+    category: "property_law"
+    title: "Landlord's Right to Enter Property"
+    question: "A landlord wants to enter a rented property to show it to prospective tenants while the current tenant is still in occupation. What are the landlord's rights and obligations regarding entry under Kenyan law?"
+    context: "Balancing landlord's property rights with tenant's right to quiet enjoyment."
+    
+    ground_truth:
+      answer: "The landlord has a right to enter for legitimate purposes including showing to prospective tenants, but must give reasonable notice (typically 24-48 hours) and enter at reasonable times. The tenant's right to quiet enjoyment must be balanced with the landlord's property rights."
+      legal_basis: "Landlord and Tenant Act; common law principles of quiet enjoyment"
+      explanation: "Entry rights are limited by the tenant's right to quiet enjoyment. Reasonable notice and timing are required, and entry must be for legitimate purposes."
+      confidence_threshold: 0.75
+    
+    evaluation_criteria:
+      required_elements:
+        - "reasonable notice"
+        - "quiet enjoyment"
+        - "legitimate purpose"
+        - "reasonable times"
+      
+      analysis_components:
+        - "balances competing rights"
+        - "identifies notice requirement"
+        - "considers timing restrictions"
+        - "mentions legitimate purposes"
+      
+      legal_reasoning:
+        - "balances landlord and tenant rights"
+        - "applies reasonableness standard"
+        - "considers practical implications"
+    
+    tools_expected:
+      - "property_law_database"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "competing_rights_analysis"
+      - "reasonableness_standard"
+      - "practical_application"
+
+  - id: "L2_CORP_001"
+    category: "corporate_law"
+    title: "Director's Duty of Care Analysis"
+    question: "A company director approved a major investment without conducting due diligence, resulting in significant losses. The investment was in the director's area of expertise. Analyze the director's potential liability under Kenyan company law."
+    context: "Director's duty of care and skill in decision-making scenario."
+    
+    ground_truth:
+      answer: "The director may be liable for breach of duty of care and skill. Despite expertise in the area, failure to conduct due diligence falls below the standard expected. The director must exercise reasonable care, skill and diligence that would be exercised by a reasonably diligent person with similar knowledge and experience."
+      legal_basis: "Companies Act 2015, Section 142; common law fiduciary duties"
+      explanation: "Directors owe duties of care, skill and diligence. The standard is both objective (reasonable director) and subjective (considering the director's actual knowledge and experience)."
+      confidence_threshold: 0.75
+    
+    evaluation_criteria:
+      required_elements:
+        - "duty of care" or "duty of skill"
+        - "breach" or "liability"
+        - "due diligence"
+        - "reasonable standard"
+      
+      analysis_components:
+        - "identifies relevant director's duty"
+        - "applies objective/subjective test"
+        - "considers director's expertise"
+        - "assesses breach of standard"
+      
+      legal_reasoning:
+        - "applies Companies Act provisions"
+        - "balances objective and subjective standards"
+        - "considers causation and damages"
+    
+    tools_expected:
+      - "companies_act_search"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "fiduciary_duty_analysis"
+      - "objective_subjective_standard"
+      - "causation_assessment"
+
+  - id: "L2_EMP_002"
+    category: "employment_law"
+    title: "Constructive Dismissal Scenario"
+    question: "An employer unilaterally reduced an employee's salary by 40% and changed their job title without consultation. The employee resigned and claims constructive dismissal. Analyze the legal position under Kenyan employment law."
+    context: "Constructive dismissal analysis involving fundamental breach of contract."
+    
+    ground_truth:
+      answer: "This likely constitutes constructive dismissal. The unilateral salary reduction and job title change represent fundamental breaches of the employment contract. The employee can treat the contract as terminated by the employer's conduct and claim unfair dismissal remedies."
+      legal_basis: "Employment Act 2007; common law principles of constructive dismissal"
+      explanation: "Constructive dismissal occurs when an employer's conduct amounts to a fundamental breach of contract, entitling the employee to resign and claim dismissal. Unilateral changes to essential terms typically constitute such breach."
+      confidence_threshold: 0.8
+    
+    evaluation_criteria:
+      required_elements:
+        - "constructive dismissal"
+        - "fundamental breach"
+        - "unilateral change"
+        - "essential terms"
+      
+      analysis_components:
+        - "identifies constructive dismissal concept"
+        - "recognizes fundamental breach"
+        - "analyzes employer's conduct"
+        - "considers employee's response"
+      
+      legal_reasoning:
+        - "applies constructive dismissal test"
+        - "identifies breach of essential terms"
+        - "considers remedies available"
+    
+    tools_expected:
+      - "employment_act_search"
+      - "legal_reasoner"
+      - "precedent_analyzer"
+    
+    complexity_factors:
+      - "constructive_dismissal_analysis"
+      - "fundamental_breach_assessment"
+      - "remedy_consideration"
+
+evaluation_settings:
+  passing_score: 0.75
+  time_limit_seconds: 300
+  required_confidence: 0.65
+  
+  scoring_weights:
+    accuracy: 0.35
+    completeness: 0.25
+    legal_reasoning: 0.25
+    citation_quality: 0.15
+  
+  benchmark_criteria:
+    excellent: 0.85
+    good: 0.75
+    satisfactory: 0.65
+    needs_improvement: 0.55

@@ -37,6 +37,9 @@ class AgentResearchRequest(BaseModel):
     confidence_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Minimum confidence threshold")
     model_preference: str = Field(default="claude-sonnet-4", description="Preferred AI model")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context for research")
+    # Context framework fields
+    enable_context_framework: bool = Field(default=True, description="Enable context engineering framework")
+    max_sources: Optional[int] = Field(default=None, ge=1, le=20, description="Maximum number of sources (overrides top_k)")
 
 class LegalSourceResponse(BaseModel):
     """Response model for legal sources"""
@@ -72,6 +75,9 @@ class AgentResearchResponse(BaseModel):
     reasoning_chain: List[str] = Field(default_factory=list)
     follow_up_suggestions: List[str] = Field(default_factory=list)
     related_queries: List[str] = Field(default_factory=list)
+    # Context framework fields
+    context_used: Optional[Dict[str, Any]] = Field(default=None, description="Context information used")
+    component_metrics: Optional[Dict[str, Any]] = Field(default=None, description="Individual component performance metrics")
 
 class AgentHealthResponse(BaseModel):
     """Response model for agent health check"""
@@ -174,15 +180,20 @@ async def agent_research(
         
         research_strategy = strategy_mapping[request.strategy]
         
-        # Perform agent research
-        result = await legal_research_agent.run_research(
+        # Configure context framework if requested
+        if hasattr(legal_research_agent, 'enable_context_framework'):
+            legal_research_agent.enable_context_framework = request.enable_context_framework
+
+        # Determine max_sources (prioritize max_sources over top_k)
+        max_sources = request.max_sources or request.top_k
+
+        # Perform agent research using enhanced method
+        result = await legal_research_agent.research(
             query=request.query,
             strategy=research_strategy,
-            top_k=request.top_k,
+            max_sources=max_sources,
             confidence_threshold=request.confidence_threshold,
-            model_preference=request.model_preference,
-            context=request.context or {},
-            user_id=str(current_user.id)  # Pass user ID for memory
+            context=request.context or {}
         )
         
         # Update query record
@@ -220,6 +231,10 @@ async def agent_research(
             fallback_used=result.metadata.fallback_used
         )
         
+        # Extract context framework fields if available
+        context_used = getattr(result, 'context_used', None)
+        component_metrics = getattr(result, 'component_metrics', None)
+
         return AgentResearchResponse(
             answer=result.answer,
             confidence=result.confidence,
@@ -229,7 +244,9 @@ async def agent_research(
             metadata=metadata_response,
             reasoning_chain=result.reasoning_chain,
             follow_up_suggestions=result.follow_up_suggestions,
-            related_queries=result.related_queries
+            related_queries=result.related_queries,
+            context_used=context_used,
+            component_metrics=component_metrics
         )
         
     except Exception as e:
@@ -388,4 +405,142 @@ async def initialize_agent(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Agent initialization failed: {str(e)}"
+        )
+
+class BenchmarkRequest(BaseModel):
+    """Request model for benchmark execution"""
+    level: Optional[int] = Field(default=None, ge=1, le=3, description="Benchmark level (1=basic, 2=intermediate, 3=advanced)")
+    category: Optional[str] = Field(default=None, description="Benchmark category (employment_law, contract_law, etc.)")
+    max_cases: int = Field(default=5, ge=1, le=20, description="Maximum number of cases to run")
+
+@router.post("/benchmark")
+async def run_benchmark(
+    request: BenchmarkRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Run GAIA-style benchmarks on the Legal Research Agent.
+    This endpoint is for testing and evaluation purposes.
+    """
+
+    try:
+        # Import benchmark manager
+        from tests.gaia_cases import BenchmarkManager
+
+        # Initialize benchmark manager
+        benchmark_manager = BenchmarkManager()
+        await benchmark_manager.initialize()
+
+        # Initialize agent if needed
+        if not legal_research_agent._initialized:
+            await legal_research_agent.initialize()
+
+        # Run benchmark suite
+        logger.info(f"Running benchmarks - Level: {request.level}, Category: {request.category}, Max cases: {request.max_cases}")
+
+        suite_results = await benchmark_manager.run_benchmark_suite(
+            level=request.level,
+            category=request.category,
+            agent=legal_research_agent,
+            max_cases=request.max_cases
+        )
+
+        # Convert results to serializable format
+        results_list = []
+        for result in suite_results.get("suite_results", []):
+            result_dict = {
+                "case_id": result.case_id,
+                "status": result.status.value if hasattr(result.status, 'value') else str(result.status),
+                "score": result.score,
+                "confidence": result.confidence,
+                "execution_time_ms": result.execution_time_ms,
+                "accuracy_score": result.accuracy_score,
+                "completeness_score": result.completeness_score,
+                "reasoning_score": result.reasoning_score,
+                "citation_score": result.citation_score
+            }
+            results_list.append(result_dict)
+
+        statistics = suite_results.get("statistics", {})
+
+        logger.info(f"Benchmark completed. Total cases: {suite_results.get('total_cases', 0)}, Average score: {statistics.get('average_score', 0.0):.3f}")
+
+        return {
+            "total_cases": suite_results.get("total_cases", 0),
+            "completion_rate": statistics.get("completion_rate", 0.0),
+            "average_score": statistics.get("average_score", 0.0),
+            "pass_rate": statistics.get("pass_rate", 0.0),
+            "results": results_list,
+            "statistics": statistics,
+            "timestamp": datetime.utcnow()
+        }
+
+    except ImportError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Benchmark system is not available"
+        )
+    except Exception as e:
+        logger.error(f"Error running benchmarks: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Benchmark execution failed: {str(e)}"
+        )
+
+@router.get("/metrics")
+async def get_agent_metrics(current_user: User = Depends(get_current_user)):
+    """
+    Get detailed metrics and performance statistics for the Legal Research Agent.
+    """
+
+    try:
+        metrics = {}
+
+        # Get basic agent metrics
+        if hasattr(legal_research_agent, 'metrics'):
+            metrics["agent"] = legal_research_agent.metrics
+
+        # Get context manager metrics if available
+        if hasattr(legal_research_agent, 'context_manager') and legal_research_agent.context_manager:
+            context_metrics = legal_research_agent.context_manager.get_context_metrics()
+            metrics["context_manager"] = context_metrics
+
+        # Get component metrics if available
+        if hasattr(legal_research_agent, 'enable_context_framework') and legal_research_agent.enable_context_framework:
+            component_metrics = {}
+
+            if hasattr(legal_research_agent, 'vector_retriever'):
+                component_metrics["vector_retriever"] = legal_research_agent.vector_retriever.get_metrics()
+            if hasattr(legal_research_agent, 'multi_source_summarizer'):
+                component_metrics["multi_source_summarizer"] = legal_research_agent.multi_source_summarizer.get_metrics()
+            if hasattr(legal_research_agent, 'legal_reasoner'):
+                component_metrics["legal_reasoner"] = legal_research_agent.legal_reasoner.get_metrics()
+            if hasattr(legal_research_agent, 'answer_formatter'):
+                component_metrics["answer_formatter"] = legal_research_agent.answer_formatter.get_metrics()
+
+            metrics["components"] = component_metrics
+
+        # Get monitoring metrics if available
+        if hasattr(legal_research_agent, 'agent_monitor'):
+            monitoring_metrics = {
+                "failure_statistics": legal_research_agent.agent_monitor.get_failure_statistics(),
+                "quality_statistics": legal_research_agent.agent_monitor.get_quality_statistics()
+            }
+            metrics["monitoring"] = monitoring_metrics
+
+        # Get refinement metrics if available
+        if hasattr(legal_research_agent, 'context_refinement'):
+            refinement_metrics = legal_research_agent.context_refinement.get_refinement_statistics()
+            metrics["refinement"] = refinement_metrics
+
+        return {
+            "metrics": metrics,
+            "timestamp": datetime.utcnow()
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting agent metrics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get metrics: {str(e)}"
         )

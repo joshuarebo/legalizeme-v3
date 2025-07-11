@@ -1,0 +1,247 @@
+benchmark_set: "GAIA Legal Benchmarks - Level 1 (Basic)"
+level: 1
+description: "Basic legal questions requiring straightforward statutory interpretation and application"
+difficulty: "basic"
+expected_completion_time: "30-60 seconds"
+
+cases:
+  - id: "L1_EMP_001"
+    category: "employment_law"
+    title: "Basic Probation Period Question"
+    question: "What is the maximum probation period allowed under Kenyan employment law?"
+    context: "A new employee wants to know about probation period limits."
+    
+    ground_truth:
+      answer: "6 months"
+      legal_basis: "Employment Act 2007, Section 10(3)"
+      explanation: "Under the Employment Act 2007, Section 10(3), the probation period shall not exceed six months."
+      confidence_threshold: 0.9
+    
+    evaluation_criteria:
+      required_elements:
+        - "6 months" or "six months"
+        - "Employment Act" or "Employment Act 2007"
+        - "Section 10" or "Section 10(3)"
+      
+      acceptable_variations:
+        - "maximum of 6 months"
+        - "not exceed six months"
+        - "up to 6 months"
+      
+      incorrect_answers:
+        - "3 months"
+        - "12 months"
+        - "1 year"
+        - "no limit"
+    
+    tools_expected:
+      - "employment_act_search"
+      - "legal_database"
+    
+    complexity_factors:
+      - "single_statute_reference"
+      - "clear_numerical_answer"
+      - "well_established_law"
+
+  - id: "L1_CON_001"
+    category: "contract_law"
+    title: "Basic Contract Formation Elements"
+    question: "What are the essential elements required for a valid contract under Kenyan law?"
+    context: "A business owner wants to understand basic contract requirements."
+    
+    ground_truth:
+      answer: "Offer, acceptance, consideration, capacity, and intention to create legal relations"
+      legal_basis: "Law of Contract Act (CAP 23), common law principles"
+      explanation: "A valid contract requires: (1) a valid offer, (2) unconditional acceptance, (3) sufficient consideration, (4) contractual capacity of parties, and (5) intention to create legal relations."
+      confidence_threshold: 0.85
+    
+    evaluation_criteria:
+      required_elements:
+        - "offer"
+        - "acceptance" 
+        - "consideration"
+        - "capacity"
+        - "intention"
+      
+      acceptable_variations:
+        - "legal capacity"
+        - "contractual capacity"
+        - "intention to create legal relations"
+        - "intention to be legally bound"
+      
+      bonus_points:
+        - "Law of Contract Act"
+        - "CAP 23"
+        - "common law"
+    
+    tools_expected:
+      - "contract_analyzer"
+      - "legal_database"
+    
+    complexity_factors:
+      - "multiple_elements_required"
+      - "fundamental_legal_principles"
+      - "well_established_doctrine"
+
+  - id: "L1_PROP_001"
+    category: "property_law"
+    title: "Basic Rent Payment Obligation"
+    question: "When is rent typically due under a monthly tenancy in Kenya?"
+    context: "A tenant wants to know when rent payments are due."
+    
+    ground_truth:
+      answer: "In advance, at the beginning of each rental period"
+      legal_basis: "Landlord and Tenant Act, common law principles"
+      explanation: "Under Kenyan law, rent is generally payable in advance at the beginning of each rental period unless the lease agreement specifies otherwise."
+      confidence_threshold: 0.8
+    
+    evaluation_criteria:
+      required_elements:
+        - "advance" or "in advance"
+        - "beginning" or "start"
+        - "rental period" or "month"
+      
+      acceptable_variations:
+        - "at the start of each month"
+        - "before the rental period begins"
+        - "upfront payment"
+      
+      incorrect_answers:
+        - "at the end of the month"
+        - "after the rental period"
+        - "whenever convenient"
+    
+    tools_expected:
+      - "property_law_database"
+      - "lease_analyzer"
+    
+    complexity_factors:
+      - "standard_practice"
+      - "common_law_principle"
+      - "practical_application"
+
+  - id: "L1_CORP_001"
+    category: "corporate_law"
+    title: "Minimum Directors for Private Company"
+    question: "What is the minimum number of directors required for a private company in Kenya?"
+    context: "Entrepreneurs planning to incorporate a private company."
+    
+    ground_truth:
+      answer: "One director"
+      legal_basis: "Companies Act 2015, Section 132"
+      explanation: "Under the Companies Act 2015, Section 132, a private company must have at least one director."
+      confidence_threshold: 0.9
+    
+    evaluation_criteria:
+      required_elements:
+        - "one" or "1"
+        - "director"
+        - "minimum"
+      
+      acceptable_variations:
+        - "at least one director"
+        - "minimum of one director"
+        - "single director"
+      
+      bonus_points:
+        - "Companies Act 2015"
+        - "Section 132"
+        - "private company"
+    
+    tools_expected:
+      - "companies_act_search"
+      - "corporate_database"
+    
+    complexity_factors:
+      - "specific_numerical_requirement"
+      - "statutory_provision"
+      - "incorporation_basics"
+
+  - id: "L1_EMP_002"
+    category: "employment_law"
+    title: "Basic Maternity Leave Duration"
+    question: "How many months of maternity leave is an employee entitled to in Kenya?"
+    context: "A pregnant employee asking about maternity leave entitlement."
+    
+    ground_truth:
+      answer: "3 months"
+      legal_basis: "Employment Act 2007, Section 29"
+      explanation: "Under the Employment Act 2007, Section 29, a female employee is entitled to three months maternity leave."
+      confidence_threshold: 0.9
+    
+    evaluation_criteria:
+      required_elements:
+        - "3 months" or "three months"
+        - "maternity leave"
+      
+      acceptable_variations:
+        - "three months of maternity leave"
+        - "3-month maternity leave"
+        - "90 days" (if explained as 3 months)
+      
+      bonus_points:
+        - "Employment Act 2007"
+        - "Section 29"
+        - "female employee"
+    
+    tools_expected:
+      - "employment_act_search"
+      - "legal_database"
+    
+    complexity_factors:
+      - "specific_entitlement"
+      - "clear_statutory_provision"
+      - "numerical_answer"
+
+  - id: "L1_CON_002"
+    category: "contract_law"
+    title: "Basic Breach of Contract Remedy"
+    question: "What is the primary remedy for breach of contract under Kenyan law?"
+    context: "A party whose contract has been breached wants to know available remedies."
+    
+    ground_truth:
+      answer: "Damages (monetary compensation)"
+      legal_basis: "Law of Contract Act (CAP 23), common law"
+      explanation: "The primary remedy for breach of contract is damages, which aim to put the innocent party in the position they would have been in if the contract had been performed."
+      confidence_threshold: 0.8
+    
+    evaluation_criteria:
+      required_elements:
+        - "damages"
+        - "compensation" or "monetary"
+      
+      acceptable_variations:
+        - "monetary damages"
+        - "financial compensation"
+        - "compensatory damages"
+      
+      bonus_points:
+        - "Law of Contract Act"
+        - "put in the position"
+        - "if contract performed"
+    
+    tools_expected:
+      - "contract_analyzer"
+      - "legal_database"
+    
+    complexity_factors:
+      - "fundamental_remedy"
+      - "common_law_principle"
+      - "practical_application"
+
+evaluation_settings:
+  passing_score: 0.8
+  time_limit_seconds: 120
+  required_confidence: 0.7
+  
+  scoring_weights:
+    accuracy: 0.4
+    completeness: 0.3
+    legal_reasoning: 0.2
+    citation_quality: 0.1
+  
+  benchmark_criteria:
+    excellent: 0.9
+    good: 0.8
+    satisfactory: 0.7
+    needs_improvement: 0.6

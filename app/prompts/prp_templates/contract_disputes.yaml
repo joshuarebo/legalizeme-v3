@@ -1,0 +1,238 @@
+name: "Contract Disputes Analysis"
+category: "contract_law"
+version: "1.0.0"
+description: "Comprehensive template for contract dispute analysis under Kenyan law"
+
+user_goal: "Analyze contract disputes, interpret terms, and determine legal remedies under Kenyan contract law"
+
+input_requirements:
+  required:
+    - contract_document: "The contract in dispute (PDF/text)"
+    - dispute_description: "Description of the contractual dispute"
+    - parties_involved: "Contracting parties and their roles"
+  optional:
+    - correspondence: "Relevant correspondence between parties"
+    - performance_evidence: "Evidence of contract performance or breach"
+    - damages_claimed: "Details of damages or losses claimed"
+    - timeline: "Timeline of contract formation and performance"
+
+tools_needed:
+  primary:
+    - "contract_analyzer"
+    - "clause_extractor"
+    - "legal_database"
+  secondary:
+    - "precedent_analyzer"
+    - "document_parser"
+    - "citation_validator"
+
+domain_context:
+  primary_law: "Law of Contract Act (CAP 23)"
+  related_laws:
+    - "Sale of Goods Act (CAP 31)"
+    - "Hire Purchase Act (CAP 507)"
+    - "Consumer Protection Act 2012"
+    - "Competition Act 2010"
+  key_concepts:
+    - "Offer and acceptance"
+    - "Consideration and capacity"
+    - "Intention to create legal relations"
+    - "Terms: express, implied, and statutory"
+    - "Conditions, warranties, and innominate terms"
+    - "Breach of contract and remedies"
+    - "Frustration and impossibility"
+    - "Misrepresentation and mistake"
+
+analysis_framework:
+  step_1:
+    name: "Contract Formation Analysis"
+    description: "Verify valid contract formation"
+    elements_to_check:
+      - "Valid offer made"
+      - "Unconditional acceptance"
+      - "Sufficient consideration"
+      - "Contractual capacity of parties"
+      - "Intention to create legal relations"
+      - "Compliance with formality requirements"
+  
+  step_2:
+    name: "Terms Identification"
+    description: "Identify and classify contract terms"
+    term_categories:
+      - "Express terms (written and oral)"
+      - "Implied terms (fact, law, custom)"
+      - "Statutory implied terms"
+      - "Exclusion and limitation clauses"
+      - "Penalty and liquidated damages clauses"
+  
+  step_3:
+    name: "Breach Analysis"
+    description: "Assess alleged breach and its consequences"
+    breach_types:
+      - "Actual breach (non-performance)"
+      - "Anticipatory breach"
+      - "Fundamental breach"
+      - "Minor breach"
+    consequences:
+      - "Right to terminate"
+      - "Right to damages"
+      - "Right to specific performance"
+  
+  step_4:
+    name: "Remedies Assessment"
+    description: "Determine available legal remedies"
+    remedy_types:
+      - "Damages (compensatory, consequential, punitive)"
+      - "Specific performance"
+      - "Injunctive relief"
+      - "Rescission and restitution"
+      - "Rectification"
+
+expected_outputs:
+  contract_analysis:
+    format: "Detailed contract interpretation"
+    sections:
+      - "Contract validity assessment"
+      - "Terms classification and interpretation"
+      - "Breach identification and analysis"
+      - "Causation and damages assessment"
+      - "Available remedies evaluation"
+  
+  legal_position:
+    format: "Clear statement of each party's legal position"
+    include:
+      - "Rights and obligations"
+      - "Breach consequences"
+      - "Liability assessment"
+      - "Mitigation requirements"
+  
+  remedial_options:
+    format: "Practical remedies analysis"
+    include:
+      - "Monetary compensation"
+      - "Equitable remedies"
+      - "Alternative dispute resolution"
+      - "Settlement considerations"
+
+confidence_criteria:
+  high_confidence:
+    - "Clear contract terms"
+    - "Established legal principles"
+    - "Straightforward breach scenarios"
+  
+  medium_confidence:
+    - "Ambiguous contract language"
+    - "Complex factual matrix"
+    - "Developing areas of law"
+  
+  low_confidence:
+    - "Novel legal issues"
+    - "Conflicting evidence"
+    - "Unclear contract formation"
+
+common_scenarios:
+  sale_of_goods:
+    description: "Disputes over goods sale contracts"
+    key_issues:
+      - "Quality and fitness for purpose"
+      - "Delivery and acceptance"
+      - "Risk and title passage"
+      - "Warranty and guarantee terms"
+  
+  service_contracts:
+    description: "Professional and service agreement disputes"
+    key_issues:
+      - "Standard of performance"
+      - "Time for performance"
+      - "Payment terms"
+      - "Termination rights"
+  
+  construction_contracts:
+    description: "Building and construction disputes"
+    key_issues:
+      - "Variations and extras"
+      - "Defective work"
+      - "Delay and extension of time"
+      - "Payment certificates"
+  
+  commercial_agreements:
+    description: "Business-to-business contract disputes"
+    key_issues:
+      - "Exclusion clauses"
+      - "Force majeure provisions"
+      - "Intellectual property rights"
+      - "Confidentiality obligations"
+
+escalation_triggers:
+  - "Fraud or misrepresentation allegations"
+  - "Unconscionable conduct claims"
+  - "Consumer protection issues"
+  - "Competition law implications"
+  - "Cross-border enforcement"
+
+quality_checks:
+  - "Contract formation elements verified"
+  - "Terms properly classified"
+  - "Breach analysis comprehensive"
+  - "Remedies assessment practical"
+  - "Case law precedents cited"
+
+template_prompts:
+  general_analysis: |
+    Analyze the following contract dispute under Kenyan law:
+    
+    Contract: {contract_document}
+    Dispute: {dispute_description}
+    Parties: {parties_involved}
+    
+    Provide comprehensive analysis covering:
+    1. Contract formation validity
+    2. Terms identification and interpretation
+    3. Breach analysis and consequences
+    4. Available remedies and enforcement
+    5. Practical recommendations
+    
+    Apply the Law of Contract Act (CAP 23) and relevant case law.
+  
+  breach_analysis: |
+    Assess the alleged contract breach:
+    
+    Contract Terms: {contract_document}
+    Alleged Breach: {dispute_description}
+    Performance Evidence: {performance_evidence}
+    
+    Determine:
+    1. Whether breach has occurred
+    2. Type and severity of breach
+    3. Consequences and remedies available
+    4. Mitigation obligations
+    5. Damages assessment
+  
+  remedies_assessment: |
+    Evaluate remedial options for contract dispute:
+    
+    Contract: {contract_document}
+    Breach Details: {dispute_description}
+    Damages Claimed: {damages_claimed}
+    
+    Assess:
+    1. Monetary damages (types and calculation)
+    2. Equitable remedies availability
+    3. Practical enforcement considerations
+    4. Alternative dispute resolution options
+    5. Settlement recommendations
+  
+  terms_interpretation: |
+    Interpret disputed contract terms:
+    
+    Contract Clauses: {contract_document}
+    Disputed Terms: {dispute_description}
+    
+    Apply interpretation principles:
+    1. Plain meaning rule
+    2. Contextual interpretation
+    3. Business efficacy test
+    4. Contra proferentem rule
+    5. Custom and usage
+    
+    Provide clear interpretation with legal basis.

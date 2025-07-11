@@ -34,12 +34,24 @@ LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedroc
 
 ### 🏗️ Production Architecture
 - **FastAPI Backend**: High-performance async API
+- **LegalResearchAgent**: Context-aware intelligent legal research with modular chaining
+- **Context Engineering Framework**: Layered context analysis with adaptive refinement
 - **Enhanced RAG System**: ChromaDB vector storage with source citations
 - **AWS Bedrock Integration**: Enterprise AI models with confidence scoring
 - **PostgreSQL Database**: Robust data persistence
 - **Redis Caching**: Sub-second response times
 - **Multi-Strategy Retrieval**: Semantic, keyword, and hybrid search
-- **Comprehensive Monitoring**: Health checks and performance metrics
+- **GAIA-Style Benchmarking**: 90% pass rate requirement with Level 1-3 evaluation
+- **Comprehensive Monitoring**: Health checks, performance metrics, and context quality tracking
+
+### 🤖 LegalResearchAgent - Context-Aware Intelligence
+- **Modular Chaining Pipeline**: VectorRetriever → MultiSourceSummarizer → LegalReasoner → AnswerFormatter
+- **Layered Context Engineering**: System/Domain/Task/Interaction/Response context layers
+- **PRP Templates**: YAML-based Product Requirement Prompts for employment, contract, property, and corporate law
+- **Context Refinement Loop**: Adaptive improvement based on performance feedback
+- **AgentMonitor Decorator**: Real-time quality tracking and failure analysis
+- **GAIA-Style Benchmarking**: Level 1-3 evaluation with 90% pass rate requirement
+- **Confidence-Based Fallbacks**: Automatic strategy adjustment for optimal results
 
 ### 📄 Multi-Modal Document Processing
 - **PDF Processing**: Advanced text extraction with pdfplumber + PyMuPDF fallback
@@ -129,14 +141,51 @@ SECRET_KEY=your-super-secret-key-change-in-production
 
 ## 🔌 API Usage
 
-### Legal Query Endpoint
+### Legal Query Endpoint (Enhanced with Agent Mode)
 ```bash
 POST /api/v1/counsel/query
 Content-Type: application/json
 
 {
   "query": "What are the constitutional rights in Kenya?",
-  "context": "employment dispute"
+  "context": "employment dispute",
+  "agent_mode": true,  // Enable LegalResearchAgent
+  "use_enhanced_rag": true
+}
+```
+
+### LegalResearchAgent Endpoint (NEW)
+```bash
+POST /api/v1/agents/research
+Content-Type: application/json
+
+{
+  "query": "What are the legal requirements for employment contracts in Kenya?",
+  "strategy": "comprehensive",  // quick, comprehensive, focused, exploratory
+  "max_sources": 10,
+  "confidence_threshold": 0.7,
+  "enable_context_framework": true,
+  "context": {
+    "domain": "employment_law",
+    "urgency": "high"
+  }
+}
+```
+
+### Agent Health and Metrics
+```bash
+# Check agent health
+GET /api/v1/agents/health
+
+# Get performance metrics
+GET /api/v1/agents/metrics
+
+# Run GAIA benchmarks
+POST /api/v1/agents/benchmark
+{
+  "level": 2,  // 1=basic, 2=intermediate, 3=advanced
+  "category": "employment_law",
+  "max_cases": 5
 }
 ```
 

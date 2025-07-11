@@ -28,6 +28,12 @@ from app.services.ai_service import AIService
 from app.services.vector_service import VectorService
 from app.core.exceptions import AIServiceException
 
+# Context Engineering Framework
+from app.context import ContextManager, ContextBlueprint, QueryContext
+from app.agents.components import VectorRetriever, MultiSourceSummarizer, LegalReasoner, AnswerFormatter
+from app.agents.decorators import AgentMonitor, ContextRefinementLoop, monitor_agent_execution
+from app.prompts import PRPManager
+
 logger = logging.getLogger(__name__)
 
 class AgentMemory:
@@ -226,9 +232,11 @@ class AgenticResearchResponse:
 class LegalResearchAgent:
     """
     Intelligent Legal Research Agent that orchestrates multiple services
-    for comprehensive legal research with agentic behavior
+    for comprehensive legal research with agentic behavior.
+
+    Enhanced with context engineering framework for production-grade legal AI.
     """
-    
+
     def __init__(
         self,
         legal_rag_service: LegalRAGService = None,
@@ -236,7 +244,12 @@ class LegalResearchAgent:
         mcp_service: MCPService = None,
         ai_service: AIService = None,
         vector_service: VectorService = None,
-        redis_url: Optional[str] = None
+        redis_url: Optional[str] = None,
+        # Context Engineering Components
+        context_manager: ContextManager = None,
+        prp_manager: PRPManager = None,
+        enable_context_framework: bool = True,
+        enable_monitoring: bool = True
     ):
         # Initialize core services
         self.legal_rag = legal_rag_service or LegalRAGService()
@@ -244,6 +257,30 @@ class LegalResearchAgent:
         self.mcp_service = mcp_service or MCPService()
         self.ai_service = ai_service or AIService()
         self.vector_service = vector_service or VectorService()
+
+        # Context Engineering Framework
+        self.enable_context_framework = enable_context_framework
+        self.enable_monitoring = enable_monitoring
+
+        if self.enable_context_framework:
+            self.context_manager = context_manager or ContextManager()
+            self.prp_manager = prp_manager or PRPManager()
+
+            # Initialize modular components
+            self.vector_retriever = VectorRetriever(self.context_manager, self.vector_service, self.legal_rag)
+            self.multi_source_summarizer = MultiSourceSummarizer(self.context_manager, self.ai_service)
+            self.legal_reasoner = LegalReasoner(self.context_manager, self.ai_service)
+            self.answer_formatter = AnswerFormatter(self.context_manager)
+
+            # Initialize monitoring and refinement
+            if self.enable_monitoring:
+                self.agent_monitor = AgentMonitor()
+                self.context_refinement = ContextRefinementLoop(
+                    self.context_manager, self.agent_monitor
+                )
+        else:
+            self.context_manager = None
+            self.prp_manager = None
 
         # Agent configuration
         self.default_confidence_threshold = 0.7
@@ -271,21 +308,66 @@ class LegalResearchAgent:
         """Initialize the agent and all underlying services"""
         if self._initialized:
             return
-            
+
         try:
             logger.info("Initializing Legal Research Agent...")
-            
+
             # Initialize core services
             await self.legal_rag.initialize()
             await self.vector_service.initialize()
-            
+
+            # Initialize context framework if enabled
+            if self.enable_context_framework:
+                await self.context_manager.initialize()
+                await self.prp_manager.initialize()
+
+                # Initialize modular components
+                await self.vector_retriever.initialize()
+                await self.multi_source_summarizer.initialize()
+                await self.legal_reasoner.initialize()
+                await self.answer_formatter.initialize()
+
+                logger.info("Context engineering framework initialized")
+
             self._initialized = True
             logger.info("Legal Research Agent initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize Legal Research Agent: {e}")
             raise AIServiceException(f"Agent initialization failed: {str(e)}", "initialization_error")
     
+    async def research(
+        self,
+        query: str,
+        strategy: ResearchStrategy = ResearchStrategy.COMPREHENSIVE,
+        max_sources: Optional[int] = None,
+        confidence_threshold: Optional[float] = None,
+        context: Optional[Dict[str, Any]] = None
+    ) -> AgenticResearchResponse:
+        """
+        Enhanced research method with context framework support.
+        Maintains backward compatibility while adding context-aware capabilities.
+        """
+
+        # Use context framework if enabled
+        if self.enable_context_framework:
+            return await self.research_with_context(
+                query=query,
+                strategy=strategy,
+                max_sources=max_sources,
+                confidence_threshold=confidence_threshold,
+                context=context
+            )
+
+        # Fallback to legacy research
+        return await self._research_legacy(
+            query=query,
+            strategy=strategy,
+            max_sources=max_sources,
+            confidence_threshold=confidence_threshold,
+            context=context
+        )
+
     async def run_research(
         self,
         query: str,
@@ -297,8 +379,9 @@ class LegalResearchAgent:
         user_id: str = "anonymous"
     ) -> AgenticResearchResponse:
         """
-        Main research method that orchestrates intelligent legal research
-        
+        Main research method that orchestrates intelligent legal research.
+        This method maintains backward compatibility while leveraging the new context framework.
+
         Args:
             query: The research question
             strategy: Research strategy to use
@@ -306,87 +389,22 @@ class LegalResearchAgent:
             confidence_threshold: Minimum confidence threshold
             model_preference: Preferred AI model
             context: Additional context for the research
-            
+            user_id: User identifier for memory tracking
+
         Returns:
             AgenticResearchResponse with comprehensive results
         """
-        start_time = time.time()
-        
-        if not self._initialized:
-            await self.initialize()
-        
-        confidence_threshold = confidence_threshold or self.default_confidence_threshold
-        context = context or {}
-        
-        try:
-            self.metrics["total_queries"] += 1
-            self.metrics["strategy_usage"][strategy.value] += 1
-            
-            # Store query in memory and get related queries for context
-            if self.enable_memory:
-                await self.memory.store_query(user_id, query, context)
-                related_queries = await self.memory.get_related_queries(user_id, query, 3)
-                if related_queries:
-                    context = context or {}
-                    context["related_queries"] = [q["query"] for q in related_queries]
-                    context["query_history"] = related_queries
-                self.metrics["memory_usage"] += 1
-            
-            # Execute research pipeline based on strategy
-            if strategy == ResearchStrategy.QUICK:
-                result = await self._quick_research(query, top_k, model_preference, context)
-            elif strategy == ResearchStrategy.COMPREHENSIVE:
-                result = await self._comprehensive_research(query, top_k, model_preference, context)
-            elif strategy == ResearchStrategy.FOCUSED:
-                result = await self._focused_research(query, top_k, model_preference, context)
-            elif strategy == ResearchStrategy.EXPLORATORY:
-                result = await self._exploratory_research(query, top_k, model_preference, context)
-            else:
-                result = await self._comprehensive_research(query, top_k, model_preference, context)
-            
-            # Apply confidence threshold and retry logic
-            if result.confidence < confidence_threshold and result.metadata.retry_count < self.max_retry_attempts:
-                logger.info(f"Confidence {result.confidence} below threshold {confidence_threshold}, retrying with broader context")
-                result = await self._retry_with_fallback(query, strategy, top_k, confidence_threshold, model_preference, context, result.metadata.retry_count + 1)
-            
-            # Update metrics
-            processing_time = (time.time() - start_time) * 1000
-            self._update_metrics(result.confidence, processing_time)
-            
-            # Update metadata
-            result.metadata.processing_time_ms = processing_time
 
-            # Store result in memory
-            if self.enable_memory:
-                await self.memory.store_query(user_id, query, context, result)
+        # Delegate to the enhanced research method
+        return await self.research(
+            query=query,
+            strategy=strategy,
+            max_sources=top_k,
+            confidence_threshold=confidence_threshold,
+            context=context
+        )
 
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error in agent research: {e}")
-            # Return error response
-            error_metadata = AgentMetadata(
-                timestamp=datetime.utcnow(),
-                model_used="error",
-                retrieval_strategy="error",
-                research_strategy=strategy,
-                processing_time_ms=(time.time() - start_time) * 1000,
-                sources_consulted=0,
-                confidence_threshold=confidence_threshold,
-                fallback_used=True
-            )
-            
-            return AgenticResearchResponse(
-                answer=f"I encountered an error while researching your question: {str(e)}",
-                confidence=0.0,
-                citations=[],
-                retrieval_strategy="error",
-                research_strategy=strategy,
-                metadata=error_metadata,
-                reasoning_chain=["Error occurred during research"],
-                follow_up_suggestions=["Please try rephrasing your question", "Check if the system is available"],
-                related_queries=[]
-            )
+
 
     async def _quick_research(
         self,
@@ -855,3 +873,285 @@ class LegalResearchAgent:
             health_status["error"] = str(e)
 
         return health_status
+
+    async def research_with_context(
+        self,
+        query: str,
+        strategy: ResearchStrategy = ResearchStrategy.COMPREHENSIVE,
+        max_sources: Optional[int] = None,
+        confidence_threshold: Optional[float] = None,
+        context: Optional[Dict[str, Any]] = None
+    ) -> AgenticResearchResponse:
+        """
+        Enhanced research method using context engineering framework.
+        Provides structured, context-aware legal research with modular chaining.
+        """
+
+        if not self.enable_context_framework:
+            raise AIServiceException("Context framework not enabled", "configuration_error")
+
+        start_time = time.time()
+
+        try:
+            # Step 1: Context Analysis
+            query_context, context_decisions = await self.context_manager.analyze_query_context(
+                query=query,
+                query_type="legal_research",
+                user_context=context or {},
+                file_attached=False,  # TODO: Detect from context
+                previous_queries=[]   # TODO: Get from memory
+            )
+
+            # Step 2: Vector Retrieval with Context
+            retrieval_input = {
+                "query": query,
+                "max_sources": max_sources or self.max_sources,
+                "strategy": self._map_strategy_to_retrieval(strategy)
+            }
+
+            retrieval_result = await self.vector_retriever.execute(
+                retrieval_input, query_context
+            )
+
+            if retrieval_result.status != "success":
+                raise AIServiceException(
+                    f"Retrieval failed: {retrieval_result.error_message}",
+                    "retrieval_error"
+                )
+
+            # Step 3: Multi-Source Summarization
+            summarization_input = {
+                "documents": retrieval_result.data["documents"],
+                "query": query,
+                "strategy": "comprehensive" if strategy == ResearchStrategy.COMPREHENSIVE else "focused"
+            }
+
+            summarization_result = await self.multi_source_summarizer.execute(
+                summarization_input, query_context
+            )
+
+            if summarization_result.status != "success":
+                raise AIServiceException(
+                    f"Summarization failed: {summarization_result.error_message}",
+                    "summarization_error"
+                )
+
+            # Step 4: Legal Reasoning
+            reasoning_input = {
+                "query": query,
+                "summary": summarization_result.data["summary"],
+                "citations": summarization_result.data["citations"],
+                "key_insights": summarization_result.data["key_insights"]
+            }
+
+            reasoning_result = await self.legal_reasoner.execute(
+                reasoning_input, query_context
+            )
+
+            if reasoning_result.status != "success":
+                raise AIServiceException(
+                    f"Legal reasoning failed: {reasoning_result.error_message}",
+                    "reasoning_error"
+                )
+
+            # Step 5: Answer Formatting
+            formatting_input = {
+                "query": query,
+                "summary": summarization_result.data["summary"],
+                "reasoning_chain": reasoning_result.data["reasoning_chain"],
+                "legal_principles": reasoning_result.data["legal_principles"],
+                "counterarguments": reasoning_result.data["counterarguments"],
+                "practical_implications": reasoning_result.data["practical_implications"],
+                "citations": summarization_result.data["citations"],
+                "key_insights": summarization_result.data["key_insights"],
+                "confidence": reasoning_result.confidence,
+                "reasoning_confidence": reasoning_result.data["reasoning_confidence"]
+            }
+
+            formatting_result = await self.answer_formatter.execute(
+                formatting_input, query_context
+            )
+
+            if formatting_result.status != "success":
+                raise AIServiceException(
+                    f"Answer formatting failed: {formatting_result.error_message}",
+                    "formatting_error"
+                )
+
+            # Calculate overall confidence
+            component_confidences = [
+                retrieval_result.confidence,
+                summarization_result.confidence,
+                reasoning_result.confidence,
+                formatting_result.confidence
+            ]
+            overall_confidence = sum(component_confidences) / len(component_confidences)
+
+            # Apply confidence threshold
+            final_confidence_threshold = confidence_threshold or self.default_confidence_threshold
+            if overall_confidence < final_confidence_threshold:
+                logger.warning(f"Low confidence result: {overall_confidence:.3f} < {final_confidence_threshold}")
+
+            # Build comprehensive reasoning chain
+            comprehensive_reasoning_chain = [
+                f"Context analysis completed: {len(context_decisions)} decisions made",
+                f"Retrieved {len(retrieval_result.data['documents'])} relevant documents",
+                f"Summarized content across {summarization_result.data.get('groups_created', 1)} legal domains",
+                f"Applied {len(reasoning_result.data['reasoning_chain'])} reasoning steps",
+                f"Formatted response using {formatting_result.data['strategy_used']} strategy"
+            ]
+
+            # Add component-specific reasoning
+            comprehensive_reasoning_chain.extend(retrieval_result.data.get("reasoning_steps", []))
+            comprehensive_reasoning_chain.extend(summarization_result.data.get("reasoning_steps", []))
+            comprehensive_reasoning_chain.extend(reasoning_result.data.get("reasoning_chain", []))
+
+            # Convert citations to LegalSource format
+            legal_sources = []
+            for citation in summarization_result.data.get("citations", []):
+                if isinstance(citation, dict):
+                    legal_source = LegalSource(
+                        title=citation.get("title", "Unknown"),
+                        content=citation.get("content", ""),
+                        source=citation.get("source", "unknown"),
+                        url=citation.get("url"),
+                        relevance_score=citation.get("relevance_score", 0.5),
+                        document_type=citation.get("document_type", "unknown"),
+                        metadata=citation.get("metadata", {})
+                    )
+                    legal_sources.append(legal_source)
+
+            # Create metadata
+            processing_time = (time.time() - start_time) * 1000
+            metadata = AgentMetadata(
+                timestamp=datetime.utcnow(),
+                model_used="context_framework",
+                retrieval_strategy=retrieval_result.data.get("strategy_used", "context_aware"),
+                research_strategy=strategy,
+                processing_time_ms=processing_time,
+                sources_consulted=len(legal_sources),
+                confidence_threshold=final_confidence_threshold
+            )
+
+            # Trigger context refinement if needed
+            if self.enable_monitoring and overall_confidence < 0.6:
+                asyncio.create_task(self.context_refinement.analyze_and_refine())
+
+            return AgenticResearchResponse(
+                answer=formatting_result.data["formatted_answer"],
+                confidence=overall_confidence,
+                citations=legal_sources,
+                retrieval_strategy=retrieval_result.data.get("strategy_used", "context_aware"),
+                research_strategy=strategy,
+                metadata=metadata,
+                reasoning_chain=comprehensive_reasoning_chain,
+                follow_up_suggestions=self._generate_follow_up_suggestions(query, legal_sources),
+                related_queries=self._generate_related_queries(query),
+                # Enhanced context-aware fields
+                context_used=query_context,
+                component_metrics={
+                    "retrieval_confidence": retrieval_result.confidence,
+                    "summarization_confidence": summarization_result.confidence,
+                    "reasoning_confidence": reasoning_result.confidence,
+                    "formatting_confidence": formatting_result.confidence,
+                    "context_decisions": len(context_decisions)
+                }
+            )
+
+        except Exception as e:
+            logger.error(f"Error in context-aware research: {e}")
+
+            # Fallback to legacy research if context framework fails
+            logger.info("Falling back to legacy research method")
+            return await self._research_legacy(
+                query=query,
+                strategy=strategy,
+                max_sources=max_sources,
+                confidence_threshold=confidence_threshold,
+                context=context
+            )
+
+    def _map_strategy_to_retrieval(self, strategy: ResearchStrategy) -> str:
+        """Map research strategy to retrieval strategy"""
+        mapping = {
+            ResearchStrategy.COMPREHENSIVE: "comprehensive",
+            ResearchStrategy.FOCUSED: "focused",
+            ResearchStrategy.EXPLORATORY: "exploratory"
+        }
+        return mapping.get(strategy, "comprehensive")
+
+    async def _research_legacy(
+        self,
+        query: str,
+        strategy: ResearchStrategy = ResearchStrategy.COMPREHENSIVE,
+        max_sources: Optional[int] = None,
+        confidence_threshold: Optional[float] = None,
+        context: Optional[Dict[str, Any]] = None
+    ) -> AgenticResearchResponse:
+        """
+        Legacy research method for backward compatibility.
+        This is the original implementation renamed.
+        """
+        start_time = time.time()
+
+        if not self._initialized:
+            await self.initialize()
+
+        confidence_threshold = confidence_threshold or self.default_confidence_threshold
+        context = context or {}
+
+        try:
+            self.metrics["total_queries"] += 1
+            self.metrics["strategy_usage"][strategy.value] += 1
+
+            # Execute research pipeline based on strategy
+            if strategy == ResearchStrategy.QUICK:
+                result = await self._quick_research(query, max_sources or 5, "claude-sonnet-4", context)
+            elif strategy == ResearchStrategy.COMPREHENSIVE:
+                result = await self._comprehensive_research(query, max_sources or 10, "claude-sonnet-4", context)
+            elif strategy == ResearchStrategy.FOCUSED:
+                result = await self._focused_research(query, max_sources or 7, "claude-sonnet-4", context)
+            elif strategy == ResearchStrategy.EXPLORATORY:
+                result = await self._exploratory_research(query, max_sources or 15, "claude-sonnet-4", context)
+            else:
+                result = await self._comprehensive_research(query, max_sources or 10, "claude-sonnet-4", context)
+
+            # Apply confidence threshold and retry logic
+            if result.confidence < confidence_threshold and result.metadata.retry_count < self.max_retry_attempts:
+                logger.info(f"Confidence {result.confidence} below threshold {confidence_threshold}, retrying with broader context")
+                result = await self._retry_with_fallback(query, strategy, max_sources or 10, confidence_threshold, "claude-sonnet-4", context, result.metadata.retry_count + 1)
+
+            # Update metrics
+            processing_time = (time.time() - start_time) * 1000
+            self._update_metrics(result.confidence, processing_time)
+
+            # Update metadata
+            result.metadata.processing_time_ms = processing_time
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Error in legacy research: {e}")
+            # Return error response
+            error_metadata = AgentMetadata(
+                timestamp=datetime.utcnow(),
+                model_used="error",
+                retrieval_strategy="error",
+                research_strategy=strategy,
+                processing_time_ms=(time.time() - start_time) * 1000,
+                sources_consulted=0,
+                confidence_threshold=confidence_threshold,
+                fallback_used=True
+            )
+
+            return AgenticResearchResponse(
+                answer=f"I encountered an error while researching your question: {str(e)}",
+                confidence=0.0,
+                citations=[],
+                retrieval_strategy="error",
+                research_strategy=strategy,
+                metadata=error_metadata,
+                reasoning_chain=["Error occurred during research"],
+                follow_up_suggestions=["Please try rephrasing your question", "Check if the system is available"],
+                related_queries=[]
+            )

@@ -202,17 +202,19 @@ try {
           "name": "ALLOWED_ORIGINS",
           "value": "https://www.legalizeme.site,https://legalizeme.site"
         },
+      ],
+      "secrets": [
         {
           "name": "AWS_ACCESS_KEY_ID",
-          "value": "YOUR_AWS_ACCESS_KEY_ID"
+          "valueFrom": "arn:aws:ssm:$Region:$AccountId:parameter/counsel/aws-access-key-id"
         },
         {
           "name": "AWS_SECRET_ACCESS_KEY",
-          "value": "YOUR_AWS_SECRET_ACCESS_KEY"
+          "valueFrom": "arn:aws:ssm:$Region:$AccountId:parameter/counsel/aws-secret-access-key"
         },
         {
           "name": "SECRET_KEY",
-          "value": "YOUR_SECRET_KEY_FOR_JWT"
+          "valueFrom": "arn:aws:ssm:$Region:$AccountId:parameter/counsel/secret-key"
         }
       ],
       "healthCheck": {

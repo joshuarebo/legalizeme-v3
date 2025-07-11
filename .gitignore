@@ -36,6 +36,7 @@ env/
 
 # Environment variables
 .env
+.env*
 .env.local
 .env.production
 
@@ -98,6 +99,15 @@ credentials/
 *.crt
 *.p12
 *.pfx
+task-definition.json
+task-definition-production.json
+
+# Deployment scripts with secrets
+create-infrastructure.ps1
+setup-rds-database.ps1
+security-cleanup.ps1
+deploy-enhanced-agent.ps1
+final-security-scan.py
 
 # Backup files
 *.bak

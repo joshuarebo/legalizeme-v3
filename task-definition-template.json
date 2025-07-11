@@ -1,0 +1,118 @@
+{
+  "family": "counsel-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::YOUR_ACCOUNT_ID:role/counsel-task-role",
+  "containerDefinitions": [
+    {
+      "name": "counsel-container",
+      "image": "YOUR_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/counsel-ai:latest",
+      "cpu": 0,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "ALLOWED_ORIGINS",
+          "value": "https://www.legalizeme.site,https://legalizeme.site"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_PRIMARY",
+          "value": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_SECONDARY",
+          "value": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_FALLBACK",
+          "value": "mistral.mistral-large-2402-v1:0"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "DEBUG",
+          "value": "false"
+        },
+        {
+          "name": "ENABLE_CONTEXT_FRAMEWORK",
+          "value": "true"
+        },
+        {
+          "name": "ENABLE_AGENT_MONITORING",
+          "value": "true"
+        },
+        {
+          "name": "CONTEXT_REFINEMENT_THRESHOLD",
+          "value": "0.6"
+        },
+        {
+          "name": "BENCHMARK_PASS_RATE_REQUIREMENT",
+          "value": "0.9"
+        },
+        {
+          "name": "MAX_QUERY_LENGTH",
+          "value": "2000"
+        },
+        {
+          "name": "DEFAULT_CONFIDENCE_THRESHOLD",
+          "value": "0.7"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/counsel/database-url"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/counsel/aws-access-key-id"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/counsel/aws-secret-access-key"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/counsel/secret-key"
+        },
+        {
+          "name": "HUGGING_FACE_TOKEN",
+          "valueFrom": "arn:aws:ssm:us-east-1:YOUR_ACCOUNT_ID:parameter/counsel/hugging-face-token"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/counsel-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": [
+          "CMD-SHELL",
+          "curl -f http://localhost:8000/health/live || exit 1"
+        ],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
