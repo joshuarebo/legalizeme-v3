@@ -11,7 +11,8 @@ from datetime import datetime
 
 from app.services.ai_service import AIService
 from app.services.model_manager import ModelManager
-from app.core.security import get_current_user
+# Authentication removed - now public service layer
+# from app.core.security import get_current_user
 from app.models.user import User
 from app.core.exceptions import AIServiceException
 
@@ -55,9 +56,7 @@ ai_service = AIService()
 model_manager = ModelManager(ai_service)
 
 @router.get("/status", response_model=ModelStatusResponse)
-async def get_model_status(
-    current_user: User = Depends(get_current_user)
-):
+async def get_model_status():
     """Get comprehensive status of all AI models"""
     try:
         status = ai_service.get_model_status()
@@ -72,17 +71,11 @@ async def get_model_status(
 @router.post("/fine-tune", response_model=FineTuningResponse)
 async def trigger_fine_tuning(
     request: FineTuningRequest,
-    background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user)
+    background_tasks: BackgroundTasks
 ):
     """Trigger fine-tuning for a specific model"""
     try:
-        # Check if user is admin (only admins can trigger fine-tuning)
-        if not current_user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only administrators can trigger model fine-tuning"
-            )
+        # Public endpoint (no admin check since auth is removed)
         
         result = await model_manager.trigger_fine_tuning(
             request.model_name, 
@@ -90,7 +83,7 @@ async def trigger_fine_tuning(
         )
         
         if result['success']:
-            logger.info(f"Fine-tuning triggered for {request.model_name} by user {current_user.username}")
+            logger.info(f"Fine-tuning triggered for {request.model_name}")
             return FineTuningResponse(
                 success=True,
                 message=result['message'],
@@ -113,9 +106,7 @@ async def trigger_fine_tuning(
         )
 
 @router.get("/fine-tuning/status")
-async def get_fine_tuning_status(
-    current_user: User = Depends(get_current_user)
-):
+async def get_fine_tuning_status():
     """Get current fine-tuning status and queue"""
     try:
         status = model_manager.get_fine_tuning_status()
@@ -129,21 +120,14 @@ async def get_fine_tuning_status(
 
 @router.post("/reload", response_model=ModelReloadResponse)
 async def reload_model(
-    request: ModelReloadRequest,
-    current_user: User = Depends(get_current_user)
+    request: ModelReloadRequest
 ):
     """Reload a specific model"""
     try:
-        # Check if user is admin
-        if not current_user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only administrators can reload models"
-            )
-        
+        # Public endpoint (no admin check since auth is removed)
         result = await ai_service.reload_model(request.model_name)
-        
-        logger.info(f"Model {request.model_name} reload triggered by user {current_user.username}")
+
+        logger.info(f"Model {request.model_name} reload triggered")
         
         return ModelReloadResponse(**result)
     
@@ -157,21 +141,13 @@ async def reload_model(
         )
 
 @router.post("/optimize", response_model=OptimizationResponse)
-async def optimize_models(
-    current_user: User = Depends(get_current_user)
-):
+async def optimize_models():
     """Optimize overall model performance"""
     try:
-        # Check if user is admin
-        if not current_user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only administrators can optimize models"
-            )
-        
+        # Public endpoint (no admin check since auth is removed)
         result = await model_manager.optimize_model_performance()
-        
-        logger.info(f"Model optimization triggered by user {current_user.username}")
+
+        logger.info(f"Model optimization triggered")
         
         return OptimizationResponse(**result)
     
@@ -186,8 +162,7 @@ async def optimize_models(
 
 @router.get("/metrics")
 async def get_model_metrics(
-    model_name: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
+    model_name: Optional[str] = None
 ):
     """Get detailed metrics for models"""
     try:
@@ -223,9 +198,7 @@ async def get_model_metrics(
         )
 
 @router.get("/health")
-async def check_model_health(
-    current_user: User = Depends(get_current_user)
-):
+async def check_model_health():
     """Check health of all models"""
     try:
         status = ai_service.get_model_status()
@@ -269,17 +242,10 @@ async def check_model_health(
         )
 
 @router.get("/config")
-async def get_model_config(
-    current_user: User = Depends(get_current_user)
-):
+async def get_model_config():
     """Get model configuration"""
     try:
-        # Check if user is admin
-        if not current_user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only administrators can view model configuration"
-            )
+        # Public endpoint (no admin check since auth is removed)
         
         configs = {}
         for model_name, config in ai_service.model_configs.items():

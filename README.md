@@ -44,14 +44,17 @@ LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedroc
 - **GAIA-Style Benchmarking**: 90% pass rate requirement with Level 1-3 evaluation
 - **Comprehensive Monitoring**: Health checks, performance metrics, and context quality tracking
 
-### 🤖 LegalResearchAgent - Context-Aware Intelligence
+### 🤖 Enhanced LegalResearchAgent - Context-Aware Intelligence
+- **5-Layer Context Framework**: System/Domain/Task/Interaction/Response context engineering with adaptive refinement
 - **Modular Chaining Pipeline**: VectorRetriever → MultiSourceSummarizer → LegalReasoner → AnswerFormatter
-- **Layered Context Engineering**: System/Domain/Task/Interaction/Response context layers
 - **PRP Templates**: YAML-based Product Requirement Prompts for employment, contract, property, and corporate law
-- **Context Refinement Loop**: Adaptive improvement based on performance feedback
-- **AgentMonitor Decorator**: Real-time quality tracking and failure analysis
+- **Context Refinement Loop**: Adaptive improvement based on performance feedback with 0.6 threshold
+- **AgentMonitor Decorator**: Real-time quality tracking, failure analysis, and performance metrics
 - **GAIA-Style Benchmarking**: Level 1-3 evaluation with 90% pass rate requirement
 - **Confidence-Based Fallbacks**: Automatic strategy adjustment for optimal results
+- **Memory Tracking**: Redis-based conversation context and research history
+- **Citation Management**: Structured source attribution with confidence scores
+- **Research Strategies**: Quick, comprehensive, focused, and exploratory modes
 
 ### 📄 Multi-Modal Document Processing
 - **PDF Processing**: Advanced text extraction with pdfplumber + PyMuPDF fallback
@@ -62,15 +65,15 @@ LegalizeMe Counsel is a sophisticated AI backend agent that leverages AWS Bedroc
 - **Structured Summarization**: Claude Sonnet 4 powered analysis with entity extraction
 - **Production Ready**: 100% test success rate with comprehensive validation
 
-### 🤖 LegalResearchAgent (NEW)
-- **Intelligent Legal Research**: Advanced agentic behavior for complex legal queries
-- **Multi-Step Reasoning**: Retrieve → Summarize → Synthesize → Respond workflow
-- **Confidence-Based Fallbacks**: Automatic model switching based on response quality
-- **Memory Tracking**: Redis-based conversation context and research history
-- **Citation Management**: Structured source attribution with confidence scores
-- **Chaining Logic**: Sequential reasoning for complex legal decision-making
-- **Agent Mode Toggle**: Available in `/counsel/query` with `agent_mode=true`
-- **Dedicated Endpoint**: `/agents/research` for specialized legal research tasks
+### 🧠 Context Framework & Agent Components
+- **Context Blueprint**: YAML-based context configuration with domain-specific templates
+- **Context Router**: Intelligent routing based on query complexity and domain
+- **Context Monitor**: Real-time quality tracking and refinement suggestions
+- **VectorRetriever**: Advanced semantic search with ChromaDB integration
+- **MultiSourceSummarizer**: Intelligent document summarization with source attribution
+- **LegalReasoner**: Complex legal reasoning with precedent analysis
+- **AnswerFormatter**: Structured response formatting with confidence scores
+- **Agent Decorators**: Performance monitoring and context refinement loops
 
 ## 📋 Prerequisites
 
@@ -154,7 +157,7 @@ Content-Type: application/json
 }
 ```
 
-### LegalResearchAgent Endpoint (NEW)
+### Enhanced LegalResearchAgent Endpoint
 ```bash
 POST /api/v1/agents/research
 Content-Type: application/json
@@ -165,27 +168,31 @@ Content-Type: application/json
   "max_sources": 10,
   "confidence_threshold": 0.7,
   "enable_context_framework": true,
+  "enable_context_refinement": true,
   "context": {
     "domain": "employment_law",
-    "urgency": "high"
+    "urgency": "high",
+    "complexity": "intermediate"
   }
 }
 ```
 
-### Agent Health and Metrics
+### Agent Health, Metrics & Benchmarking
 ```bash
-# Check agent health
-GET /api/v1/agents/health
+# Check agent health with context framework status
+GET /api/v1/agents/health?args=context_check&kwargs=full_status
 
-# Get performance metrics
-GET /api/v1/agents/metrics
+# Get comprehensive performance metrics
+GET /api/v1/agents/metrics?include_context_metrics=true
 
-# Run GAIA benchmarks
+# Run GAIA-style benchmarks with enhanced evaluation
 POST /api/v1/agents/benchmark
 {
   "level": 2,  // 1=basic, 2=intermediate, 3=advanced
   "category": "employment_law",
-  "max_cases": 5
+  "max_cases": 5,
+  "enable_context_framework": true,
+  "require_pass_rate": 0.9
 }
 ```
 
@@ -233,20 +240,26 @@ GET /api/v1/health
 
 ### Run Production Tests
 ```bash
-# Test Bedrock models
-python scripts/production_test.py
+# Test Enhanced LegalResearchAgent
+python -m pytest tests/agents/test_enhanced_legal_research_agent.py
 
-# Test multi-modal processing (NEW)
+# Test Context Framework
+python -m pytest tests/context/
+
+# Test Agent Components
+python -m pytest tests/agents/components/
+
+# Test GAIA Benchmarks
+python -m pytest tests/benchmarks/test_gaia_validation.py
+
+# Test Enhanced API Endpoints
+python -m pytest tests/api/test_enhanced_agents_api.py
+
+# Test multi-modal processing
 python multimodal_test.py
 
-# Run integration tests (NEW)
-python integration_test.py
-
-# Run unit tests
-pytest tests/test_bedrock_models.py
-
-# Full test suite
-pytest
+# Full enhanced test suite
+pytest tests/ --cov=app --cov-report=html
 ```
 
 ### Test Coverage
@@ -347,27 +360,33 @@ const basicQuery = await queryLegal('What are employment rights in Kenya?');
 const agentQuery = await queryLegal('Analyze employment contract requirements', true);
 ```
 
-#### 🤖 LegalResearchAgent Endpoint (NEW)
+#### 🤖 Enhanced LegalResearchAgent Endpoint
 ```javascript
-// Advanced legal research with agentic behavior
-const researchLegal = async (query, context = null) => {
-  const response = await fetch(`${API_BASE_URL}/agents/research`, {
+// Advanced legal research with context framework and agentic behavior
+const researchLegal = async (query, options = {}) => {
+  const response = await fetch(`${API_BASE_URL}/api/v1/agents/research`, {
     method: 'POST',
     headers: DEFAULT_HEADERS,
     body: JSON.stringify({
       query: query,
-      context: context,
-      max_iterations: 3,
-      confidence_threshold: 0.8
+      strategy: options.strategy || 'comprehensive',
+      enable_context_framework: true,
+      enable_context_refinement: true,
+      confidence_threshold: options.confidence || 0.7,
+      context: {
+        domain: options.domain || 'general_law',
+        urgency: options.urgency || 'medium',
+        complexity: options.complexity || 'intermediate'
+      }
     })
   });
   return await response.json();
 };
 
-// Usage example
+// Usage examples
 const research = await researchLegal(
   'What are the legal requirements for employment contracts in Kenya?',
-  'employment law'
+  { domain: 'employment_law', strategy: 'comprehensive', urgency: 'high' }
 );
 ```
 
@@ -456,19 +475,24 @@ const checkLiveHealth = async () => {
 }
 ```
 
-**LegalResearchAgent Response:**
+**Enhanced LegalResearchAgent Response:**
 ```json
 {
-  "research_result": "Based on comprehensive analysis...",
+  "research_result": "Based on comprehensive analysis using context framework...",
   "confidence_score": 0.89,
+  "context_quality_score": 0.92,
   "reasoning_steps": [
-    "Retrieved relevant employment law documents",
-    "Analyzed contract requirements",
-    "Synthesized legal obligations"
+    "Applied 5-layer context framework",
+    "Retrieved relevant employment law documents via VectorRetriever",
+    "Summarized sources using MultiSourceSummarizer",
+    "Applied legal reasoning with LegalReasoner",
+    "Formatted response with AnswerFormatter"
   ],
   "sources": [...],
   "agent_iterations": 2,
   "final_model": "claude-sonnet-4",
+  "context_refinement_applied": true,
+  "strategy_used": "comprehensive",
   "memory_context": "employment_contracts_2025"
 }
 ```
@@ -514,11 +538,16 @@ const handleApiCall = async (apiFunction) => {
 };
 ```
 
-#### 🚀 Production Deployment Status
+#### 🚀 Enhanced Production Deployment Status
 - ✅ **API Base URL**: `http://counsel-alb-694525771.us-east-1.elb.amazonaws.com`
 - ✅ **Health Endpoint**: `/health/live` (200 OK)
 - ✅ **Documentation**: `/docs` (Interactive Swagger UI)
-- ✅ **LegalResearchAgent**: `/agents/research` (Production Ready)
+- ✅ **Enhanced LegalResearchAgent**: `/api/v1/agents/research` (Production Ready)
+- ✅ **Context Framework**: 5-layer context engineering (Active)
+- ✅ **Agent Components**: Modular chaining pipeline (Deployed)
+- ✅ **PRP Templates**: YAML-based prompts (Available)
+- ✅ **GAIA Benchmarking**: Level 1-3 evaluation (90% pass rate)
+- ✅ **Agent Monitoring**: Performance tracking and refinement (Active)
 - ✅ **Multi-Modal Processing**: `/multimodal/process` (PDF + OCR)
 - ✅ **Vector Search**: `/search/vector` (ChromaDB Integration)
 - ✅ **Security**: Rate limiting and request validation active
@@ -600,13 +629,51 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **📚 API Documentation**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs)
 - **💚 Health Status**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health/live](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health/live)
 
-### **🎯 Ready for Production**
+### **🎯 Enhanced Production Ready**
 ✅ **Infrastructure**: AWS ECS Fargate with RDS PostgreSQL
+✅ **Enhanced AI**: 5-layer context framework with modular agent components
+✅ **GAIA Benchmarking**: Level 1-3 evaluation with 90% pass rate requirement
+✅ **PRP Templates**: YAML-based prompts for employment, contract, property, corporate law
+✅ **Agent Monitoring**: Real-time performance tracking and context refinement
 ✅ **Security**: JWT authentication, rate limiting, CORS
 ✅ **Monitoring**: CloudWatch logs, health checks, alerting
 ✅ **CI/CD**: GitHub Actions automated deployment
 ✅ **Documentation**: Comprehensive guides for frontend integration
 ✅ **Multi-Modal Processing**: PDF/OCR/Document analysis with 100% test success rate
+
+---
+
+## 🌟 **Enhanced Features (Latest Release)**
+
+### 🧠 **5-Layer Context Framework**
+- **System Context**: Infrastructure and model configuration
+- **Domain Context**: Legal domain expertise (employment, contract, property, corporate)
+- **Task Context**: Query-specific requirements and complexity
+- **Interaction Context**: User session and conversation history
+- **Response Context**: Output formatting and quality assurance
+
+### 🔧 **Modular Agent Components**
+- **VectorRetriever**: Advanced semantic search with ChromaDB
+- **MultiSourceSummarizer**: Intelligent document summarization
+- **LegalReasoner**: Complex legal reasoning with precedent analysis
+- **AnswerFormatter**: Structured response with confidence scores
+
+### 📋 **PRP Templates (YAML-based)**
+- **Employment Law**: Comprehensive employment rights and obligations
+- **Contract Disputes**: Contract analysis and dispute resolution
+- **Corporate Compliance**: Business registration and compliance
+- **Lease Agreements**: Property and rental law guidance
+
+### 📊 **GAIA-Style Benchmarking**
+- **Level 1**: Basic legal queries (90%+ pass rate)
+- **Level 2**: Intermediate legal analysis (90%+ pass rate)
+- **Level 3**: Advanced legal reasoning (90%+ pass rate)
+
+### 🔍 **Agent Monitoring & Refinement**
+- **AgentMonitor Decorator**: Real-time performance tracking
+- **Context Refinement Loop**: Adaptive improvement (0.6 threshold)
+- **Quality Metrics**: Response accuracy and confidence scoring
+- **Failure Analysis**: Automatic error detection and recovery
 
 ---
 

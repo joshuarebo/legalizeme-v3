@@ -10,7 +10,7 @@ class Query(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     uuid = Column(UUID(as_uuid=True), default=uuid.uuid4, unique=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Made nullable for public service layer
     
     # Query details
     query_text = Column(Text, nullable=False)

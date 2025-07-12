@@ -26,7 +26,8 @@ except ImportError:
 from app.database import get_db
 from app.models.user import User
 from app.models.query import Query
-from app.core.security import get_current_user
+# Authentication removed - now public service layer
+# from app.core.security import get_current_user
 from app.config import settings
 from app.crawlers.kenya_law_crawler import KenyaLawCrawler
 from app.crawlers.parliament_crawler import ParliamentCrawler
@@ -41,6 +42,7 @@ class LegalQueryRequest(BaseModel):
     query_type: str = Field(default="legal_query")
     use_enhanced_rag: bool = Field(default=True, description="Use enhanced RAG system (enabled by default for production)")
     agent_mode: bool = Field(default=False, description="Use intelligent agent mode for comprehensive research")
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
 
 class LegalQueryResponse(BaseModel):
     query_id: str
@@ -64,6 +66,7 @@ class LegalQueryResponse(BaseModel):
 class DocumentGenerationRequest(BaseModel):
     document_type: str = Field(..., description="Type of document to generate")
     parameters: Dict[str, Any] = Field(..., description="Parameters for document generation")
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
 
 class DocumentGenerationResponse(BaseModel):
     document_type: str
@@ -91,6 +94,7 @@ class QueryFeedback(BaseModel):
 class DirectQueryRequest(BaseModel):
     query: str = Field(..., max_length=settings.MAX_QUERY_LENGTH)
     model_preference: Optional[str] = Field(default=None, description="Preferred model: claude-sonnet, claude-haiku, or mistral-7b")
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
 
 class DirectQueryResponse(BaseModel):
     response_text: str
@@ -114,16 +118,19 @@ else:
 @router.post("/query", response_model=LegalQueryResponse)
 async def ask_legal_question(
     request: LegalQueryRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Ask a legal question and get AI-powered response"""
     start_time = datetime.utcnow()
     
     try:
-        # Create query record
+        # Create query record with optional user_id
+        user_id = None
+        if request.user_context and 'user_id' in request.user_context:
+            user_id = request.user_context['user_id']
+
         query_record = Query(
-            user_id=current_user.id,
+            user_id=user_id,
             query_text=request.query,
             query_type=request.query_type,
             context=request.context,
@@ -317,8 +324,7 @@ async def ask_legal_question(
 
 @router.post("/query-direct", response_model=DirectQueryResponse)
 async def direct_llm_query(
-    request: DirectQueryRequest,
-    current_user: User = Depends(get_current_user)
+    request: DirectQueryRequest
 ):
     """Direct query to LLM manager with fallback logic - Production endpoint"""
     try:
@@ -347,7 +353,6 @@ async def direct_llm_query(
 @router.post("/generate-document", response_model=DocumentGenerationResponse)
 async def generate_legal_document(
     request: DocumentGenerationRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Generate legal documents"""
@@ -429,15 +434,13 @@ async def conduct_legal_research(
 @router.post("/feedback")
 async def submit_query_feedback(
     feedback: QueryFeedback,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Submit feedback for a query"""
     try:
-        # Find the query
+        # Find the query (no user restriction since auth is removed)
         query = db.query(Query).filter(
-            Query.uuid == feedback.query_id,
-            Query.user_id == current_user.id
+            Query.uuid == feedback.query_id
         ).first()
         
         if not query:
@@ -467,8 +470,7 @@ async def submit_query_feedback(
 async def fetch_legal_resources(
     query: str = FastAPIQuery(..., description="Search query for legal resources"),
     source: str = FastAPIQuery("all", description="Source to search: kenya_law, parliament, or all"),
-    limit: int = FastAPIQuery(10, ge=1, le=50, description="Maximum number of results"),
-    current_user: User = Depends(get_current_user)
+    limit: int = FastAPIQuery(10, ge=1, le=50, description="Maximum number of results")
 ):
     """Fetch legal resources from Kenya Law and Parliament websites"""
     try:
@@ -511,14 +513,16 @@ async def fetch_legal_resources(
 async def get_query_history(
     limit: int = 10,
     offset: int = 0,
-    current_user: User = Depends(get_current_user),
+    user_id: Optional[str] = FastAPIQuery(None, description="Optional user ID to filter history"),
     db: Session = Depends(get_db)
 ):
-    """Get user's query history"""
+    """Get query history (optionally filtered by user_id)"""
     try:
-        queries = db.query(Query).filter(
-            Query.user_id == current_user.id
-        ).order_by(Query.created_at.desc()).offset(offset).limit(limit).all()
+        query_filter = db.query(Query)
+        if user_id:
+            query_filter = query_filter.filter(Query.user_id == user_id)
+
+        queries = query_filter.order_by(Query.created_at.desc()).offset(offset).limit(limit).all()
         
         query_history = []
         for query in queries:
@@ -551,8 +555,7 @@ async def get_query_history(
 
 @router.get("/suggest")
 async def get_query_suggestions(
-    query: str,
-    current_user: User = Depends(get_current_user)
+    query: str
 ):
     """Get query suggestions based on partial input"""
     try:

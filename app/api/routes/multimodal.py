@@ -17,7 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.core.security import get_current_user
+# Authentication removed - now public service layer
+# from app.core.security import get_current_user
 from app.services.advanced_multimodal import (
     MultiModalDocumentProcessor,
     DocumentRouter,
@@ -63,6 +64,7 @@ class VectorSearchRequest(BaseModel):
     limit: int = Field(default=5, ge=1, le=20, description="Maximum number of results")
     document_type: Optional[str] = Field(None, description="Filter by document type")
     extraction_method: Optional[str] = Field(None, description="Filter by extraction method")
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
     confidence_threshold: Optional[float] = Field(None, ge=0.0, le=1.0, description="Minimum confidence score")
 
 class VectorSearchResponse(BaseModel):
@@ -87,7 +89,7 @@ class CapabilitiesResponse(BaseModel):
 async def process_document(
     file: UploadFile = File(..., description="Document file to process"),
     options: str = Form(default="{}", description="Processing options as JSON string"),
-    current_user: User = Depends(get_current_user)
+    user_context: str = Form(default="{}", description="Optional user context as JSON string")
 ):
     """
     Process a document using multi-modal capabilities
@@ -192,8 +194,7 @@ async def process_document(
 
 @router.post("/search", response_model=VectorSearchResponse)
 async def search_documents(
-    request: VectorSearchRequest,
-    current_user: User = Depends(get_current_user)
+    request: VectorSearchRequest
 ):
     """
     Search processed documents using vector similarity
@@ -276,9 +277,7 @@ async def get_capabilities():
         )
 
 @router.get("/stats")
-async def get_collection_stats(
-    current_user: User = Depends(get_current_user)
-):
+async def get_collection_stats():
     """
     Get statistics about the multi-modal document collection
     
@@ -301,8 +300,7 @@ async def get_collection_stats(
 
 @router.delete("/document/{document_id}")
 async def delete_document(
-    document_id: str,
-    current_user: User = Depends(get_current_user)
+    document_id: str
 ):
     """
     Delete a document and its chunks from the multi-modal collection

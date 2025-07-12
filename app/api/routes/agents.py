@@ -3,7 +3,7 @@ Agent API Routes
 Provides endpoints for intelligent agent interactions and research
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query as FastAPIQuery
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import List, Dict, Optional, Any
@@ -15,7 +15,8 @@ from app.agents.legal_research_agent import LegalResearchAgent, ResearchStrategy
 from app.database import get_db
 from app.models.user import User
 from app.models.query import Query
-from app.core.security import get_current_user
+# Authentication removed - now public service layer
+# from app.core.security import get_current_user
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ class AgentResearchRequest(BaseModel):
     confidence_threshold: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Minimum confidence threshold")
     model_preference: str = Field(default="claude-sonnet-4", description="Preferred AI model")
     context: Optional[Dict[str, Any]] = Field(default=None, description="Additional context for research")
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
     # Context framework fields
     enable_context_framework: bool = Field(default=True, description="Enable context engineering framework")
     max_sources: Optional[int] = Field(default=None, ge=1, le=20, description="Maximum number of sources (overrides top_k)")
@@ -147,7 +149,6 @@ async def agent_research_info():
 @router.post("/research", response_model=AgentResearchResponse)
 async def agent_research(
     request: AgentResearchRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -157,9 +158,13 @@ async def agent_research(
     fallback strategies, and comprehensive source analysis.
     """
     try:
-        # Create query record for tracking
+        # Create query record for tracking with optional user_id
+        user_id = None
+        if request.user_context and 'user_id' in request.user_context:
+            user_id = request.user_context['user_id']
+
         query_record = Query(
-            user_id=current_user.id,
+            user_id=user_id,
             query_text=request.query,
             query_type="agent_research",
             context=request.context,
@@ -263,9 +268,7 @@ async def agent_research(
         )
 
 @router.get("/health", response_model=AgentHealthResponse)
-async def agent_health_check(
-    current_user: User = Depends(get_current_user)
-):
+async def agent_health_check():
     """Get health status of the Legal Research Agent and its services"""
     try:
         health_status = await legal_research_agent.health_check()
@@ -284,9 +287,7 @@ async def agent_health_check(
         )
 
 @router.get("/metrics", response_model=AgentMetricsResponse)
-async def agent_metrics(
-    current_user: User = Depends(get_current_user)
-):
+async def agent_metrics():
     """Get performance metrics for the Legal Research Agent"""
     try:
         metrics = legal_research_agent.get_metrics()
@@ -312,11 +313,15 @@ async def agent_metrics(
 
 @router.get("/memory", response_model=AgentMemoryResponse)
 async def agent_memory(
-    current_user: User = Depends(get_current_user)
+    user_id: Optional[str] = FastAPIQuery(None, description="Optional user ID to get memory for")
 ):
-    """Get agent memory summary for current user"""
+    """Get agent memory summary for specified user (or all if no user_id provided)"""
     try:
-        user_memory = await legal_research_agent.get_user_memory_summary(str(current_user.id))
+        if user_id:
+            user_memory = await legal_research_agent.get_user_memory_summary(user_id)
+        else:
+            # Return general memory stats if no user specified
+            user_memory = {"total_queries": 0, "recent_queries": []}
 
         return AgentMemoryResponse(
             total_queries=user_memory.get("recent_queries_count", 0),
@@ -332,11 +337,15 @@ async def agent_memory(
 
 @router.delete("/memory")
 async def clear_agent_memory(
-    current_user: User = Depends(get_current_user)
+    user_id: Optional[str] = FastAPIQuery(None, description="Optional user ID to clear memory for")
 ):
-    """Clear agent memory for current user"""
+    """Clear agent memory for specified user (or all if no user_id provided)"""
     try:
-        await legal_research_agent.clear_user_memory(str(current_user.id))
+        if user_id:
+            await legal_research_agent.clear_user_memory(user_id)
+        else:
+            # Clear all memory if no user specified (admin operation)
+            await legal_research_agent.clear_all_memory()
 
         return {
             "success": True,
@@ -355,15 +364,18 @@ async def clear_agent_memory(
 async def get_related_queries(
     query: str,
     limit: int = 5,
-    current_user: User = Depends(get_current_user)
+    user_id: Optional[str] = FastAPIQuery(None, description="Optional user ID to get related queries for")
 ):
-    """Get queries related to the provided query for current user"""
+    """Get queries related to the provided query for specified user"""
     try:
-        related_queries = await legal_research_agent.get_related_queries(
-            str(current_user.id),
-            query,
-            limit
-        )
+        if user_id:
+            related_queries = await legal_research_agent.get_related_queries(
+                user_id,
+                query,
+                limit
+            )
+        else:
+            related_queries = []
 
         return {
             "query": query,
@@ -380,17 +392,10 @@ async def get_related_queries(
         )
 
 @router.post("/initialize")
-async def initialize_agent(
-    current_user: User = Depends(get_current_user)
-):
+async def initialize_agent():
     """Initialize the Legal Research Agent and its services"""
     try:
-        # Check if user is admin for initialization
-        if not current_user.is_admin:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only administrators can initialize the agent"
-            )
+        # Public initialization endpoint (no admin check since auth is removed)
 
         await legal_research_agent.initialize()
 
@@ -412,11 +417,11 @@ class BenchmarkRequest(BaseModel):
     level: Optional[int] = Field(default=None, ge=1, le=3, description="Benchmark level (1=basic, 2=intermediate, 3=advanced)")
     category: Optional[str] = Field(default=None, description="Benchmark category (employment_law, contract_law, etc.)")
     max_cases: int = Field(default=5, ge=1, le=20, description="Maximum number of cases to run")
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
 
 @router.post("/benchmark")
 async def run_benchmark(
-    request: BenchmarkRequest,
-    current_user: User = Depends(get_current_user)
+    request: BenchmarkRequest
 ):
     """
     Run GAIA-style benchmarks on the Legal Research Agent.
@@ -488,7 +493,7 @@ async def run_benchmark(
         )
 
 @router.get("/metrics")
-async def get_agent_metrics(current_user: User = Depends(get_current_user)):
+async def get_agent_metrics():
     """
     Get detailed metrics and performance statistics for the Legal Research Agent.
     """

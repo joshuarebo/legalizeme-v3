@@ -10,7 +10,8 @@ from app.services.ai_service import AIService
 from app.database import get_db
 from app.models.user import User
 from app.models.document import Document
-from app.core.security import get_current_user
+# Authentication removed - now public service layer
+# from app.core.security import get_current_user
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class DocumentSearchRequest(BaseModel):
     query: str = Field(..., max_length=settings.MAX_QUERY_LENGTH)
     filters: Optional[Dict[str, Any]] = None
     limit: int = Field(default=10, ge=1, le=50)
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
 
 class DocumentResponse(BaseModel):
     id: int
@@ -38,6 +40,7 @@ class DocumentResponse(BaseModel):
 
 class DocumentAnalysisRequest(BaseModel):
     document_id: int
+    user_context: Optional[Dict[str, Any]] = Field(default=None, description="Optional user context from frontend")
 
 class DocumentAnalysisResponse(BaseModel):
     document_id: int
@@ -59,7 +62,6 @@ ai_service = AIService()
 @router.post("/search", response_model=List[DocumentResponse])
 async def search_documents(
     request: DocumentSearchRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Search for documents"""
@@ -144,7 +146,7 @@ async def get_document_content(
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    user_context: Optional[str] = Form(None, description="Optional user context JSON"),
     db: Session = Depends(get_db)
 ):
     """Upload a document for processing"""
@@ -169,11 +171,20 @@ async def upload_document(
         # Read file content
         file_content = await file.read()
         
-        # Process the uploaded file
+        # Process the uploaded file with optional user_id
+        user_id = None
+        if user_context:
+            import json
+            try:
+                user_data = json.loads(user_context)
+                user_id = user_data.get('user_id')
+            except json.JSONDecodeError:
+                pass
+
         document = await document_service.process_uploaded_file(
             file_content,
             file.filename,
-            current_user.id
+            user_id
         )
         
         if not document:
@@ -201,7 +212,6 @@ async def upload_document(
 @router.post("/analyze", response_model=DocumentAnalysisResponse)
 async def analyze_document(
     request: DocumentAnalysisRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Analyze a document using AI"""

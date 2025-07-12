@@ -16,27 +16,22 @@ The Kenyan Legal AI API provides comprehensive legal assistance services specifi
 - **Security & Rate Limiting** - Production-grade security measures
 - **Kenyan Legal Specialization** - Focused on Kenyan law and jurisdiction
 
-## 🔐 Authentication
+## 🔓 Public Service Layer
 
-### JWT Token Authentication
-```http
-Authorization: Bearer <your_jwt_token>
-```
+### No Authentication Required
+All endpoints are now **public** and do not require authentication. Counsel AI functions as a service layer that can be called directly by frontend applications.
 
-### Obtain Access Token
-```http
-POST /auth/token
-Content-Type: application/x-www-form-urlencoded
+### Optional User Context
+You can optionally provide user context in request bodies for tracking and personalization:
 
-username=your_username&password=your_password
-```
-
-**Response:**
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "token_type": "bearer",
-  "expires_in": 1800
+  "query": "Your legal question",
+  "user_context": {
+    "user_id": "user-123",
+    "email": "user@example.com",
+    "session_id": "session-456"
+  }
 }
 ```
 
@@ -118,7 +113,6 @@ GET /
 ```http
 POST /counsel/query
 Content-Type: application/json
-Authorization: Bearer <token>
 
 {
   "query": "How do I register a company in Kenya?",
@@ -131,6 +125,10 @@ Authorization: Bearer <token>
     "enable_rag": true,
     "enable_prompt_engineering": true,
     "retrieval_strategy": "hybrid"
+  },
+  "user_context": {
+    "user_id": "user-123",
+    "email": "user@example.com"
   }
 }
 ```
@@ -159,7 +157,7 @@ Authorization: Bearer <token>
 ```http
 POST /counsel/generate-document
 Content-Type: application/json
-Authorization: Bearer <token>
+# No authentication required
 
 {
   "document_type": "contract",
@@ -201,7 +199,7 @@ Authorization: Bearer <token>
 ### Search Legal Documents
 ```http
 GET /documents/search?q=employment+termination&limit=10&source=kenyan_law
-Authorization: Bearer <token>
+# No authentication required
 ```
 
 **Response:**
@@ -230,11 +228,12 @@ Authorization: Bearer <token>
 ```http
 POST /documents/upload
 Content-Type: multipart/form-data
-Authorization: Bearer <token>
+# No authentication required
 
 file: <legal_document.pdf>
 analysis_type: "compliance_check"
 jurisdiction: "kenya"
+user_context: {"user_id": "user-123"}
 ```
 
 **Response:**
@@ -257,12 +256,12 @@ jurisdiction: "kenya"
 }
 ```
 
-## 🔧 Model Management (Admin Only)
+## 🔧 Model Management (Public Access)
 
 ### Model Status
 ```http
 GET /models/status
-Authorization: Bearer <admin_token>
+# No authentication required
 ```
 
 **Response:**
@@ -289,7 +288,7 @@ Authorization: Bearer <admin_token>
 ```http
 POST /models/test-fallback
 Content-Type: application/json
-Authorization: Bearer <admin_token>
+# No authentication required
 
 {
   "test_query": "Test fallback system",
@@ -361,7 +360,7 @@ async function queryLegalAdvice(question) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
+      // No authentication required
     },
     body: JSON.stringify({
       query: question,
@@ -407,7 +406,7 @@ function useLegalQuery() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getToken()}`
+          // No authentication required
         },
         body: JSON.stringify({ query: question, context })
       });
