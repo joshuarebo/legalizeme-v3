@@ -393,7 +393,6 @@ async def generate_legal_document(
 @router.post("/research", response_model=LegalResearchResponse)
 async def conduct_legal_research(
     request: LegalResearchRequest,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Conduct comprehensive legal research"""

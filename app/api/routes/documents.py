@@ -84,7 +84,6 @@ async def search_documents(
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(
     document_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get a specific document"""
@@ -111,7 +110,6 @@ async def get_document(
 @router.get("/{document_id}/content")
 async def get_document_content(
     document_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get document content"""
@@ -248,7 +246,6 @@ async def analyze_document(
 async def get_documents_by_source(
     source: str,
     limit: int = 50,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get documents by source"""
@@ -270,7 +267,6 @@ async def get_documents_by_source(
 
 @router.get("/stats/overview")
 async def get_document_statistics(
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get document statistics"""
@@ -293,7 +289,6 @@ async def get_document_statistics(
 async def find_similar_documents(
     document_id: int,
     limit: int = 5,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Find similar documents"""
@@ -337,7 +332,6 @@ async def find_similar_documents(
 @router.get("/recent/updates")
 async def get_recent_document_updates(
     limit: int = 20,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get recently updated documents"""
