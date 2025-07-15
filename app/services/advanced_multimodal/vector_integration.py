@@ -283,7 +283,7 @@ class MultiModalVectorIntegration:
         """Generate embeddings using AI service"""
         try:
             if hasattr(self.ai_service, 'generate_embeddings'):
-                embeddings = self.ai_service.generate_embeddings(text)
+                embeddings = await self.ai_service.generate_embeddings(text)
                 return embeddings if embeddings else None
             else:
                 # Fallback to document processor

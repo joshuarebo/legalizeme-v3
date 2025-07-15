@@ -49,23 +49,28 @@ class ModelManager:
         """Monitor model performance and trigger actions if needed"""
         try:
             status = self.ai_service.get_model_status()
-            
+
             for model_name, model_info in status['models'].items():
-                metrics = model_info['metrics']
-                
+                # Extract metrics from the actual model_info structure
+                success_count = model_info.get('success_count', 0)
+                error_count = model_info.get('error_count', 0)
+                total_requests = success_count + error_count
+                error_rate = error_count / total_requests if total_requests > 0 else 0.0
+                avg_response_time = model_info.get('avg_response_time', 0.0)
+
                 # Check if model needs attention
-                if metrics['error_rate'] > 0.5:  # 50% error rate
-                    logger.warning(f"Model {model_name} has high error rate: {metrics['error_rate']:.2%}")
+                if error_rate > 0.5:  # 50% error rate
+                    logger.warning(f"Model {model_name} has high error rate: {error_rate:.2%}")
                     self._schedule_model_reload(model_name)
-                
-                elif metrics['avg_response_time'] > 120:  # 2 minutes
-                    logger.warning(f"Model {model_name} has slow response time: {metrics['avg_response_time']:.2f}s")
-                
-                # Check if fine-tuning is needed
-                if not model_info['fine_tuned'] and model_name != 'claude-sonnet-4':
-                    if metrics['total_requests'] > 100:  # Enough data to fine-tune
+
+                elif avg_response_time > 120:  # 2 minutes
+                    logger.warning(f"Model {model_name} has slow response time: {avg_response_time:.2f}s")
+
+                # Check if fine-tuning is needed (skip for Bedrock models)
+                if model_name != 'claude-sonnet-4' and model_name != 'claude-3' and model_name != 'mistral-7b':
+                    if total_requests > 100:  # Enough data to fine-tune
                         self._schedule_fine_tuning(model_name)
-        
+
         except Exception as e:
             logger.error(f"Error monitoring model performance: {e}")
     
@@ -224,15 +229,22 @@ class ModelManager:
                         'action': 'reload',
                         'result': reload_result
                     }
-                
-                elif model_info['metrics']['error_rate'] > 0.3:
-                    # Schedule fine-tuning for models with high error rates
-                    if model_name != 'claude-sonnet-4':
-                        ft_result = await self.trigger_fine_tuning(model_name, priority=True)
-                        results[model_name] = {
-                            'action': 'fine_tune',
-                            'result': ft_result
-                        }
+
+                else:
+                    # Calculate error rate from actual model info
+                    success_count = model_info.get('success_count', 0)
+                    error_count = model_info.get('error_count', 0)
+                    total_requests = success_count + error_count
+                    error_rate = error_count / total_requests if total_requests > 0 else 0.0
+
+                    if error_rate > 0.3:
+                        # Schedule fine-tuning for models with high error rates (skip Bedrock models)
+                        if model_name not in ['claude-sonnet-4', 'claude-3', 'mistral-7b']:
+                            ft_result = await self.trigger_fine_tuning(model_name, priority=True)
+                            results[model_name] = {
+                                'action': 'fine_tune',
+                                'result': ft_result
+                            }
             
             return {
                 'success': True,

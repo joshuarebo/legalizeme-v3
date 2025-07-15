@@ -10,13 +10,16 @@ import time
 
 from app.config import settings
 from app.database import engine, Base, get_db
-from app.api.routes import counsel, documents, auth, health, models, multimodal, agents
+from app.api.routes import counsel, documents, auth, health, models, multimodal, simple_agent
 from app.core.middleware import setup_middleware
 from app.core.middleware.security_middleware import SecurityMiddleware
 from app.core.security.rate_limiter import RateLimiter
 from app.core.orchestration.intelligence_enhancer import IntelligenceEnhancer
 from app.services.crawler_service import CrawlerService
 from app.services.vector_service import VectorService
+from app.services.aws_vector_service import aws_vector_service
+from app.services.aws_embedding_service import aws_embedding_service
+from app.services.enhanced_rag_service import enhanced_rag_service
 
 # Configure logging with environment-based settings
 log_level = getattr(settings, 'LOG_LEVEL', 'INFO')
@@ -61,25 +64,32 @@ async def lifespan(app: FastAPI):
         crawler_service = CrawlerService()
         vector_service = VectorService()
 
+        # Initialize AWS-native services
+        await aws_vector_service.initialize()
+        await aws_embedding_service.initialize()
+        await enhanced_rag_service.initialize()
+
         # Initialize intelligence enhancer
         intelligence_enhancer = IntelligenceEnhancer(vector_service)
 
-        # Initialize rate limiter (Redis optional)
-        redis_url = getattr(settings, 'REDIS_URL', None)
-        if redis_url:
-            logger.info(f"Initializing rate limiter with Redis: {redis_url[:20]}...")
-        else:
-            logger.info("Initializing rate limiter with in-memory cache (Redis not available)")
-        rate_limiter = RateLimiter(redis_url)
+        # Initialize rate limiter (local cache only, Redis removed)
+        logger.info("Initializing rate limiter with local cache (Redis removed)")
+        rate_limiter = RateLimiter()
 
         # Store services in app state for access by routes
         app.state.crawler_service = crawler_service
         app.state.vector_service = vector_service
+        app.state.aws_vector_service = aws_vector_service
+        app.state.aws_embedding_service = aws_embedding_service
+        app.state.enhanced_rag_service = enhanced_rag_service
         app.state.intelligence_enhancer = intelligence_enhancer
         app.state.rate_limiter = rate_limiter
 
         # Initialize vector database
         await vector_service.initialize()
+
+        # Initialize conversation tables
+        await _ensure_conversation_tables_exist()
 
         # Start background tasks
         if getattr(settings, 'ENABLE_BACKGROUND_CRAWLING', True):
@@ -88,6 +98,9 @@ async def lifespan(app: FastAPI):
         # Generate training data if needed
         if getattr(settings, 'ENABLE_MODEL_FINE_TUNING', False):
             await _ensure_training_data_exists()
+
+        # Simple Agent is ready - no complex initialization needed
+        logger.info("✅ Simple Legal Agent ready - no initialization required")
 
         logger.info("Counsel AI Backend started successfully")
         logger.info(f"Environment: {settings.ENVIRONMENT}")
@@ -114,6 +127,21 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
 
+async def _ensure_conversation_tables_exist():
+    """Ensure conversation tables exist in the database"""
+    try:
+        from app.models.conversation import Conversation, ConversationMessage
+
+        # Create conversation tables if they don't exist
+        Conversation.__table__.create(engine, checkfirst=True)
+        ConversationMessage.__table__.create(engine, checkfirst=True)
+
+        logger.info("✅ Conversation tables initialized successfully")
+
+    except Exception as e:
+        logger.warning(f"⚠️ Conversation table initialization failed: {e}")
+        # Don't fail the application if this fails
+
 async def _ensure_training_data_exists():
     """Ensure training data exists for fine-tuning"""
     training_data_path = getattr(settings, 'FINE_TUNE_DATA_PATH', './data/kenyan_legal_training.jsonl')
@@ -136,7 +164,21 @@ async def _ensure_training_data_exists():
 
 app = FastAPI(
     title="Counsel AI Backend",
-    description="AI-powered legal assistant for Kenyan jurisdiction with modular orchestration, RAG capabilities, and intelligent fallbacks",
+    description="""
+    🏛️ **Counsel AI Backend** - AI-powered legal assistant for Kenyan jurisdiction
+
+    ## Features
+    - 🤖 **Simple Legal Agent**: Direct AWS Bedrock integration with multi-model fallback
+    - 📚 **Kenyan Legal Expertise**: Employment, Company, Constitutional, Land, and Family Law
+    - 🔄 **Multi-Model Support**: Claude Sonnet 4, Claude 3.7, Mistral Large
+    - 📄 **Document Processing**: Upload and analyze legal documents
+    - 🔍 **Legal Research**: Comprehensive legal research with citations
+    - 🛡️ **Bulletproof Design**: Never fails, always provides responses
+
+    ## Public Service Layer
+    All endpoints are available as public services with optional user context.
+    Perfect for frontend integration with gradual complexity enhancement.
+    """,
     version="2.0.0",
     lifespan=lifespan,
     docs_url="/docs",  # Always enable docs for API integration
@@ -156,32 +198,16 @@ app = FastAPI(
     }
 )
 
-# Configure CORS based on environment
-allowed_origins = []
-if settings.ENVIRONMENT == "development":
-    allowed_origins = [
-        "http://localhost:3000",
-        "http://localhost:5000",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000"
-    ]
-elif settings.ENVIRONMENT == "production":
-    # Get from environment variable or use defaults
-    origins_str = getattr(settings, 'ALLOWED_ORIGINS', 'https://www.legalizeme.site,https://legalizeme.site')
-    allowed_origins = [origin.strip() for origin in origins_str.split(',')]
-    # Add ALB domain for Swagger UI to work
-    allowed_origins.extend([
-        "http://counsel-alb-694525771.us-east-1.elb.amazonaws.com",
-        "https://counsel-alb-694525771.us-east-1.elb.amazonaws.com"
-    ])
+# Configure CORS for public service layer - more permissive for integration
+allowed_origins = ["*"]  # Allow all origins for public service layer
 
-# CORS middleware
+# CORS middleware - configured for public service layer integration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
-    allow_methods=getattr(settings, 'ALLOWED_METHODS', 'GET,POST,PUT,DELETE,OPTIONS').split(','),
-    allow_headers=getattr(settings, 'ALLOWED_HEADERS', 'Content-Type,Authorization,X-Requested-With').split(','),
+    allow_credentials=False,  # No credentials needed for public service
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"],
+    allow_headers=["*"],  # Allow all headers for easier integration
 )
 
 # Add security middleware
@@ -193,11 +219,15 @@ setup_middleware(app)
 
 # Include routers
 app.include_router(health.router, prefix="/health", tags=["health"])
-app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+
+# Conditionally include auth router (disabled for public service layer)
+if not getattr(settings, 'DISABLE_AUTH_ROUTES', False):
+    app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+
 app.include_router(counsel.router, prefix="/api/v1/counsel", tags=["counsel"])
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["model-management"])
-app.include_router(agents.router, prefix="/api/v1/agents", tags=["intelligent-agents"])
+app.include_router(simple_agent.router, prefix="/api/v1/agents", tags=["simple-legal-agent"])
 app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["multimodal-processing"])
 
 @app.get("/")

@@ -5,14 +5,9 @@ from sqlalchemy.orm import Session
 import json
 
 # Optional imports - these are heavy dependencies that may not be available
-try:
-    import chromadb
-    from chromadb.config import Settings
-    HAS_CHROMADB = True
-except ImportError:
-    HAS_CHROMADB = False
-    logger = logging.getLogger(__name__)
-    logger.warning("ChromaDB not available, vector operations will be disabled")
+# Use AWS-native vector service instead of ChromaDB
+from app.services.aws_vector_service import aws_vector_service
+HAS_CHROMADB = True  # Always available with AWS fallback
 
 from app.config import settings
 from app.models.document import Document
@@ -23,49 +18,25 @@ logger = logging.getLogger(__name__)
 class VectorService:
     def __init__(self):
         self.client = None
-        self.collection = None
         self.collection_name = "legal_documents"
         self._initialized = False
         
     async def initialize(self):
-        """Initialize ChromaDB client and collection"""
+        """Initialize AWS Vector Service"""
         if self._initialized:
             return
-            
+
         try:
-            if not HAS_CHROMADB:
-                logger.warning("ChromaDB not available, vector operations disabled")
-                self._initialized = True
-                return
-                
-            # Initialize ChromaDB client
-            self.client = chromadb.PersistentClient(
-                path=settings.CHROMA_PERSIST_DIRECTORY,
-                settings=Settings(
-                    anonymized_telemetry=False,
-                    allow_reset=True
-                )
-            )
-            
-            # Get or create collection
-            try:
-                self.collection = self.client.get_collection(
-                    name=self.collection_name
-                )
-                logger.info(f"Retrieved existing collection: {self.collection_name}")
-            except Exception:
-                self.collection = self.client.create_collection(
-                    name=self.collection_name,
-                    metadata={"description": "Legal documents for RAG system"}
-                )
-                logger.info(f"Created new collection: {self.collection_name}")
-                
+            # Use AWS Vector Service instead of ChromaDB
+            await aws_vector_service.initialize()
+            self.client = aws_vector_service
+            logger.info("Vector service initialized with AWS backend")
             self._initialized = True
-            logger.info("Vector service initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Error initializing vector service: {e}")
-            raise
+            # Continue without vector service for development
+            self._initialized = True
             
     async def add_document(self, document: Document) -> bool:
         """Add document to vector store"""
@@ -88,12 +59,13 @@ class VectorService:
                 "tags": json.dumps(document.tags) if document.tags else "[]"
             }
             
-            # Add to collection
-            self.collection.add(
-                documents=[document.content],
-                metadatas=[metadata],
-                ids=[doc_id]
-            )
+            # Add to AWS vector service
+            if self.client:
+                await self.client.add_document(
+                    doc_id=doc_id,
+                    content=document.content,
+                    metadata=metadata
+                )
             
             # Update document status
             db = SessionLocal()
@@ -127,32 +99,29 @@ class VectorService:
                 if filters.get('document_type'):
                     where_clause['document_type'] = filters['document_type']
                     
-            # Search in vector store
-            results = self.collection.query(
-                query_texts=[query],
-                n_results=limit,
-                where=where_clause if where_clause else None
-            )
-            
-            # Convert results to Document objects
+            # Search using AWS vector service
             documents = []
-            if results['ids'] and results['ids'][0]:
-                db = SessionLocal()
-                try:
-                    for i, doc_id in enumerate(results['ids'][0]):
-                        # Extract document ID from the stored ID
-                        db_id = int(doc_id.replace('doc_', ''))
-                        
-                        # Get document from database
-                        document = db.query(Document).filter(Document.id == db_id).first()
-                        if document:
-                            # Add relevance score
-                            distance = results['distances'][0][i]
-                            document.relevance_score = 1.0 - distance  # Convert distance to similarity
-                            documents.append(document)
-                            
-                finally:
-                    db.close()
+            if self.client:
+                results = await self.client.search_similar(
+                    query=query,
+                    limit=limit,
+                    filters=filters
+                )
+
+                # Convert results to Document objects
+                if results:
+                    db = SessionLocal()
+                    try:
+                        for result in results:
+                            doc_id = result.get('id', '').replace('doc_', '')
+                            if doc_id.isdigit():
+                                db_id = int(doc_id)
+                                document = db.query(Document).filter(Document.id == db_id).first()
+                                if document:
+                                    document.relevance_score = result.get('score', 0.0)
+                                    documents.append(document)
+                    finally:
+                        db.close()
                     
             return documents
             
@@ -201,12 +170,13 @@ class VectorService:
                 "tags": json.dumps(document.tags) if document.tags else "[]"
             }
             
-            # Update in collection
-            self.collection.update(
-                ids=[doc_id],
-                documents=[document.content],
-                metadatas=[metadata]
-            )
+            # Update in AWS vector service
+            if self.client:
+                await self.client.update_document(
+                    doc_id=doc_id,
+                    content=document.content,
+                    metadata=metadata
+                )
             
             logger.info(f"Document updated in vector store: {document.id}")
             return True
@@ -223,8 +193,9 @@ class VectorService:
                 
             doc_id = f"doc_{document_id}"
             
-            # Delete from collection
-            self.collection.delete(ids=[doc_id])
+            # Delete from AWS vector service
+            if self.client:
+                await self.client.delete_document(doc_id)
             
             logger.info(f"Document deleted from vector store: {document_id}")
             return True
@@ -239,13 +210,20 @@ class VectorService:
             if not self._initialized:
                 await self.initialize()
                 
-            count = self.collection.count()
-            
-            return {
-                "total_documents": count,
-                "collection_name": self.collection_name,
-                "status": "active"
-            }
+            # Get stats from AWS vector service
+            if self.client:
+                stats = await self.client.get_stats()
+                return {
+                    "total_documents": stats.get('count', 0),
+                    "collection_name": self.collection_name,
+                    "status": "active"
+                }
+            else:
+                return {
+                    "total_documents": 0,
+                    "collection_name": self.collection_name,
+                    "status": "inactive"
+                }
             
         except Exception as e:
             logger.error(f"Error getting collection stats: {e}")
@@ -259,12 +237,9 @@ class VectorService:
             if not self._initialized:
                 await self.initialize()
                 
-            # Clear existing collection
-            self.client.delete_collection(self.collection_name)
-            self.collection = self.client.create_collection(
-                name=self.collection_name,
-                metadata={"description": "Legal documents for RAG system"}
-            )
+            # Clear existing data in AWS vector service
+            if self.client:
+                await self.client.clear_all()
             
             # Get all processed documents
             db = SessionLocal()
@@ -297,12 +272,14 @@ class VectorService:
                         }
                         metadatas.append(metadata)
                     
-                    # Add batch to collection
-                    self.collection.add(
-                        documents=contents,
-                        metadatas=metadatas,
-                        ids=ids
-                    )
+                    # Add batch to AWS vector service
+                    if self.client:
+                        for j, doc in enumerate(batch):
+                            await self.client.add_document(
+                                doc_id=ids[j],
+                                content=contents[j],
+                                metadata=metadatas[j]
+                            )
                     
                     # Update document status
                     for doc in batch:

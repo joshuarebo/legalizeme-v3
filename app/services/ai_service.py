@@ -18,26 +18,18 @@ from functools import wraps
 # Set up logger
 logger = logging.getLogger(__name__)
 
-# Optional imports - these are heavy dependencies that may not be available
-try:
-    from transformers import AutoTokenizer, AutoModelForCausalLM, TrainingArguments, Trainer
-    from transformers import TextDataset, DataCollatorForLanguageModeling
-    from datasets import Dataset
-    import torch
-    import torch.nn as nn
-    from torch.utils.data import DataLoader
-    HAS_TRANSFORMERS = True
-except ImportError:
-    HAS_TRANSFORMERS = False
-    logger.warning("Transformers not available - using AWS Bedrock only")
+# Transformers removed - using AWS Bedrock only for production
+HAS_TRANSFORMERS = False
+logger.info("Using AWS Bedrock only - transformers disabled for production")
 
+# Use AWS-native embedding service instead of sentence transformers
 try:
-    from sentence_transformers import SentenceTransformer
-    HAS_SENTENCE_TRANSFORMERS = True
+    from app.services.aws_embedding_service import aws_embedding_service
+    from app.services.token_service import token_service
+    HAS_SENTENCE_TRANSFORMERS = True  # Always available with AWS fallback
 except ImportError:
     HAS_SENTENCE_TRANSFORMERS = False
-    logger = logging.getLogger(__name__)
-    logger.warning("Sentence transformers not available, embeddings will be disabled")
+    logger.warning("AWS embedding service not available")
 
 from app.config import settings
 from app.models.document import Document
@@ -171,11 +163,9 @@ class AIService:
         self.response_cache = {}
         self.cache_ttl = 3600  # 1 hour
 
-        # Initialize embedding model if available
-        if HAS_SENTENCE_TRANSFORMERS:
-            self.embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL)
-        else:
-            self.embedding_model = None
+        # Use AWS Bedrock for embeddings only
+        self.embedding_model = None  # No local embedding models
+        logger.info("Using AWS Bedrock Titan for embeddings")
 
         # Initialize LLM manager (handles Bedrock models)
         self.llm_manager = llm_manager
@@ -584,11 +574,16 @@ class AIService:
                 'error': str(e)
             }
     
-    def generate_embeddings(self, text: str) -> List[float]:
-        """Generate embeddings for text"""
+    async def generate_embeddings(self, text: str) -> List[float]:
+        """Generate embeddings for text using AWS Bedrock"""
         try:
-            embeddings = self.embedding_model.encode(text)
-            return embeddings.tolist()
+            # Use AWS embedding service directly (async)
+            if HAS_SENTENCE_TRANSFORMERS:
+                embeddings = await aws_embedding_service.generate_embeddings(text)
+                return embeddings if embeddings else []
+            else:
+                logger.warning("AWS embedding service not available, returning empty embeddings")
+                return []
         except Exception as e:
             logger.error(f"Error generating embeddings: {e}")
             return []

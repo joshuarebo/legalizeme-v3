@@ -13,12 +13,9 @@ import json
 import hashlib
 from datetime import datetime, timedelta
 
-try:
-    import redis.asyncio as redis
-    HAS_REDIS = True
-except ImportError:
-    HAS_REDIS = False
-    redis = None
+# Redis completely removed - using local cache only
+HAS_REDIS = False
+redis = None
 
 from fastapi import Request, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -53,15 +50,10 @@ class RateLimiter:
         self.local_cache = {}
         self.cache_ttl = 300  # 5 minutes
         self.rules = {}
-        
-        # Initialize Redis if available
-        if HAS_REDIS and redis_url:
-            try:
-                self.redis_client = redis.from_url(redis_url, decode_responses=True)
-                logger.info("Redis rate limiter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Redis rate limiter: {e}")
-        
+
+        # Redis completely removed - always use local cache
+        logger.info("Rate limiter initialized with local cache (Redis removed)")
+
         # Default rules
         self._initialize_default_rules()
     

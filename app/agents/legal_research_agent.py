@@ -13,12 +13,8 @@ from enum import Enum
 import json
 import hashlib
 
-# Redis support (optional)
-try:
-    import redis
-    HAS_REDIS = True
-except ImportError:
-    HAS_REDIS = False
+# Redis completely removed - using PostgreSQL-only architecture
+HAS_REDIS = False
 
 # Core services
 from app.services.advanced.legal_rag import LegalRAGService, LegalSource, RAGResponse
@@ -39,28 +35,14 @@ logger = logging.getLogger(__name__)
 class AgentMemory:
     """
     Memory system for the Legal Research Agent
-    Supports both in-memory and Redis-based storage
+    Uses local in-memory storage only (Redis removed)
     """
 
     def __init__(self, redis_url: Optional[str] = None, max_memory_size: int = 100):
         self.max_memory_size = max_memory_size
-        self.redis_client = None
         self.local_memory = []
-        self.use_redis = False
-
-        # Initialize Redis if available and URL provided
-        if HAS_REDIS and redis_url:
-            try:
-                self.redis_client = redis.from_url(redis_url, decode_responses=True)
-                # Test connection
-                self.redis_client.ping()
-                self.use_redis = True
-                logger.info("Agent memory initialized with Redis")
-            except Exception as e:
-                logger.warning(f"Failed to connect to Redis, using local memory: {e}")
-                self.use_redis = False
-        else:
-            logger.info("Agent memory initialized with local storage")
+        # Redis completely removed - always use local memory
+        logger.info("Agent memory initialized with local storage (Redis removed)")
 
     def _generate_key(self, user_id: str, query: str) -> str:
         """Generate a unique key for the query"""
@@ -68,7 +50,7 @@ class AgentMemory:
         return f"agent_memory:{user_id}:{query_hash}"
 
     async def store_query(self, user_id: str, query: str, context: Dict[str, Any], result: Any = None):
-        """Store a query and its context in memory"""
+        """Store a query and its context in local memory"""
         memory_entry = {
             "query": query,
             "context": context,
@@ -77,24 +59,8 @@ class AgentMemory:
             "result_summary": self._summarize_result(result) if result else None
         }
 
-        if self.use_redis and self.redis_client:
-            try:
-                key = self._generate_key(user_id, query)
-                # Store with 24 hour expiration
-                self.redis_client.setex(key, 86400, json.dumps(memory_entry))
-
-                # Maintain user query list
-                user_queries_key = f"agent_queries:{user_id}"
-                self.redis_client.lpush(user_queries_key, key)
-                self.redis_client.ltrim(user_queries_key, 0, self.max_memory_size - 1)
-                self.redis_client.expire(user_queries_key, 86400)
-
-            except Exception as e:
-                logger.error(f"Failed to store query in Redis: {e}")
-                # Fall back to local memory
-                self._store_local(memory_entry)
-        else:
-            self._store_local(memory_entry)
+        # Always use local memory (Redis removed)
+        self._store_local(memory_entry)
 
     def _store_local(self, memory_entry: Dict[str, Any]):
         """Store query in local memory"""
@@ -103,26 +69,9 @@ class AgentMemory:
             self.local_memory = self.local_memory[-self.max_memory_size:]
 
     async def get_user_queries(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Get recent queries for a user"""
-        if self.use_redis and self.redis_client:
-            try:
-                user_queries_key = f"agent_queries:{user_id}"
-                query_keys = self.redis_client.lrange(user_queries_key, 0, limit - 1)
-
-                queries = []
-                for key in query_keys:
-                    query_data = self.redis_client.get(key)
-                    if query_data:
-                        queries.append(json.loads(query_data))
-
-                return queries
-
-            except Exception as e:
-                logger.error(f"Failed to get queries from Redis: {e}")
-                # Fall back to local memory
-                return [q for q in self.local_memory if q.get("user_id") == user_id][-limit:]
-        else:
-            return [q for q in self.local_memory if q.get("user_id") == user_id][-limit:]
+        """Get recent queries for a user from local memory"""
+        # Always use local memory (Redis removed)
+        return [q for q in self.local_memory if q.get("user_id") == user_id][-limit:]
 
     async def get_related_queries(self, user_id: str, current_query: str, limit: int = 5) -> List[Dict[str, Any]]:
         """Get queries related to the current query"""
@@ -157,44 +106,18 @@ class AgentMemory:
         return None
 
     async def clear_user_memory(self, user_id: str):
-        """Clear memory for a specific user"""
-        if self.use_redis and self.redis_client:
-            try:
-                user_queries_key = f"agent_queries:{user_id}"
-                query_keys = self.redis_client.lrange(user_queries_key, 0, -1)
-
-                # Delete all query entries
-                for key in query_keys:
-                    self.redis_client.delete(key)
-
-                # Delete the user queries list
-                self.redis_client.delete(user_queries_key)
-
-            except Exception as e:
-                logger.error(f"Failed to clear Redis memory: {e}")
-
-        # Also clear from local memory
+        """Clear memory for a specific user from local memory"""
+        # Clear from local memory (Redis removed)
         self.local_memory = [q for q in self.local_memory if q.get("user_id") != user_id]
 
     def get_memory_stats(self) -> Dict[str, Any]:
         """Get memory system statistics"""
-        stats = {
-            "storage_type": "redis" if self.use_redis else "local",
+        return {
+            "storage_type": "local",
             "max_size": self.max_memory_size,
-            "local_entries": len(self.local_memory)
+            "local_entries": len(self.local_memory),
+            "redis_removed": True
         }
-
-        if self.use_redis and self.redis_client:
-            try:
-                # Get Redis info
-                info = self.redis_client.info()
-                stats["redis_connected"] = True
-                stats["redis_memory_usage"] = info.get("used_memory_human", "unknown")
-            except Exception as e:
-                stats["redis_connected"] = False
-                stats["redis_error"] = str(e)
-
-        return stats
 
 class ResearchStrategy(Enum):
     """Different research strategies"""
@@ -244,7 +167,6 @@ class LegalResearchAgent:
         mcp_service: MCPService = None,
         ai_service: AIService = None,
         vector_service: VectorService = None,
-        redis_url: Optional[str] = None,
         # Context Engineering Components
         context_manager: ContextManager = None,
         prp_manager: PRPManager = None,
@@ -299,8 +221,8 @@ class LegalResearchAgent:
             "memory_usage": 0
         }
 
-        # Enhanced memory system
-        self.memory = AgentMemory(redis_url=redis_url, max_memory_size=100)
+        # Enhanced memory system (local only, Redis removed)
+        self.memory = AgentMemory(max_memory_size=100)
 
         self._initialized = False
     

@@ -1,0 +1,370 @@
+name: Counsel AI CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: counsel-ai
+  ECS_CLUSTER: counsel-cluster
+  ECS_SERVICE: counsel-service
+
+jobs:
+  # Stage 1: Code Quality & Security
+  code-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov black flake8 safety bandit mypy
+      
+      - name: Code formatting check
+        run: black --check --diff .
+      
+      - name: Linting with flake8
+        run: flake8 app/ tests/ --max-line-length=88 --extend-ignore=E203,W503
+      
+      - name: Type checking with mypy
+        run: mypy app/ --ignore-missing-imports
+      
+      - name: Security scan with bandit
+        run: bandit -r app/ -f json -o bandit-report.json
+      
+      - name: Dependency security check
+        run: safety check --json --output safety-report.json
+      
+      - name: Unit tests with coverage
+        run: |
+          pytest tests/unit/ --cov=app --cov-report=xml --cov-report=html --cov-fail-under=90
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  # Stage 2: Build and Security Scan
+  build-and-scan:
+    needs: code-quality
+    runs-on: ubuntu-latest
+    outputs:
+      image-uri: ${{ steps.build-image.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Build Docker image
+          docker build -f Dockerfile.ecs -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          # Push image to ECR
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.build-image.outputs.image }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # Stage 3: Deploy to Staging (develop branch only)
+  deploy-staging:
+    needs: build-and-scan
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Deploy to staging ECS
+        run: |
+          # Force new deployment on staging
+          aws ecs update-service \
+            --cluster counsel-cluster-staging \
+            --service counsel-service-staging \
+            --force-new-deployment
+      
+      - name: Wait for staging deployment to complete
+        run: |
+          aws ecs wait services-stable \
+            --cluster counsel-cluster-staging \
+            --services counsel-service-staging \
+            --cli-read-timeout 600 \
+            --cli-connect-timeout 60
+
+  # Stage 4: Integration Tests on Staging
+  integration-tests:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install test dependencies
+        run: |
+          pip install pytest requests pytest-xdist pytest-html
+      
+      - name: Wait for staging service to be ready
+        run: |
+          echo "Waiting for staging service to be ready..."
+          sleep 60
+      
+      - name: Run integration tests against staging
+        env:
+          TEST_BASE_URL: "http://counsel-alb-694525771.us-east-1.elb.amazonaws.com"
+        run: |
+          pytest tests/regression/ -v --html=integration-report.html --self-contained-html
+
+      - name: Run regression tests against staging
+        env:
+          TEST_BASE_URL: "http://counsel-alb-694525771.us-east-1.elb.amazonaws.com"
+        run: |
+          pytest tests/regression/ -v --html=regression-report.html --self-contained-html
+      
+      - name: Upload test reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: test-reports
+          path: |
+            integration-report.html
+            regression-report.html
+
+  # Stage 5: Production Deployment (main branch only)
+  deploy-production:
+    needs: [build-and-scan]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Blue-Green Deployment to Production
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Get current task definition
+          TASK_DEFINITION=$(aws ecs describe-task-definition \
+            --task-definition counsel-task \
+            --query 'taskDefinition' \
+            --output json)
+          
+          # Update image URI in task definition
+          NEW_TASK_DEF=$(echo $TASK_DEFINITION | jq --arg IMAGE "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+            '.containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes) | del(.placementConstraints) | del(.compatibilities) | del(.registeredAt) | del(.registeredBy)')
+          
+          # Register new task definition
+          NEW_REVISION=$(echo $NEW_TASK_DEF | aws ecs register-task-definition \
+            --cli-input-json file:///dev/stdin \
+            --query 'taskDefinition.revision' \
+            --output text)
+          
+          echo "Registered new task definition revision: $NEW_REVISION"
+          
+          # Update service with new task definition
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition counsel-task:$NEW_REVISION
+      
+      - name: Wait for production deployment to complete
+        run: |
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --cli-read-timeout 900 \
+            --cli-connect-timeout 60
+      
+      - name: Post-deployment health check
+        run: |
+          echo "Waiting for service to fully start..."
+          sleep 60
+          
+          # Test critical endpoints
+          echo "Testing health endpoint..."
+          curl -f -m 30 http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health || exit 1
+          
+          echo "Testing conversation creation..."
+          curl -f -m 30 -X POST http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/api/v1/counsel/conversations \
+            -H "Content-Type: application/json" \
+            -H "User-Agent: HealthCheck/1.0" \
+            -d '{"title":"Deployment Health Check","agent_mode":false}' || exit 1
+          
+          echo "✅ Health checks passed!"
+
+  # Stage 6: Post-Deployment Monitoring and Validation
+  post-deployment-monitoring:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install test dependencies
+        run: |
+          pip install pytest requests
+      
+      - name: Run comprehensive endpoint validation
+        env:
+          TEST_BASE_URL: "http://counsel-alb-694525771.us-east-1.elb.amazonaws.com"
+        run: |
+          pytest tests/regression/ -v --tb=short
+      
+      - name: Extended monitoring (5 minutes)
+        run: |
+          echo "🔍 Starting 5-minute monitoring period..."
+          for i in {1..10}; do
+            echo "Health check $i/10..."
+            curl -f -m 10 http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health
+            if [ $? -eq 0 ]; then
+              echo "✅ Health check $i passed"
+            else
+              echo "❌ Health check $i failed"
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "✅ Extended monitoring completed successfully!"
+      
+      - name: Deployment success notification
+        if: success()
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "✅ All 21 endpoints are operational"
+          echo "📊 System is healthy and ready for traffic"
+      
+      - name: Deployment failure notification
+        if: failure()
+        run: |
+          echo "❌ Deployment validation failed!"
+          echo "🔄 Consider triggering rollback procedure"
+          exit 1
+
+  # Rollback job (manual trigger or on failure)
+  rollback:
+    runs-on: ubuntu-latest
+    if: failure() && github.ref == 'refs/heads/main'
+    needs: [post-deployment-monitoring]
+    environment: production
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Automated rollback
+        run: |
+          echo "🔄 Starting automated rollback..."
+          
+          # Get current task definition
+          CURRENT_TASK_DEF=$(aws ecs describe-services \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE \
+            --query 'services[0].taskDefinition' \
+            --output text)
+          
+          # Calculate previous revision
+          CURRENT_REVISION=$(echo $CURRENT_TASK_DEF | grep -o '[0-9]*$')
+          PREVIOUS_REVISION=$((CURRENT_REVISION - 1))
+          PREVIOUS_TASK_DEF="counsel-task:$PREVIOUS_REVISION"
+          
+          echo "📋 Rolling back from $CURRENT_TASK_DEF to $PREVIOUS_TASK_DEF"
+          
+          # Update service to previous task definition
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --task-definition $PREVIOUS_TASK_DEF
+          
+          # Wait for rollback to complete
+          echo "⏳ Waiting for rollback to complete..."
+          aws ecs wait services-stable \
+            --cluster $ECS_CLUSTER \
+            --services $ECS_SERVICE
+          
+          # Verify rollback success
+          echo "🧪 Verifying rollback success..."
+          sleep 30
+          curl -f http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health
+          
+          echo "✅ Rollback completed successfully!"

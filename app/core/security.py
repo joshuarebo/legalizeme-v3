@@ -54,69 +54,19 @@ def verify_token(token: str) -> Dict[str, Any]:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db)
-) -> User:
-    """Get current user from JWT token"""
-    try:
-        # Verify the token
-        payload = verify_token(credentials.credentials)
-        username: str = payload.get("sub")
-        
-        if username is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        # Get user from database
-        user = db.query(User).filter(User.username == username).first()
-        
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User account is disabled",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        return user
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error getting current user: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+def get_current_user(*args, **kwargs) -> Optional[User]:
+    """Public service layer - no authentication required
+    Returns None to indicate no user context (optional user context)
+    """
+    return None
 
-def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
-    """Get current active user"""
-    if not current_user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
-    return current_user
+def get_current_active_user(*args, **kwargs) -> Optional[User]:
+    """Public service layer - no authentication required"""
+    return None
 
-def get_current_admin_user(current_user: User = Depends(get_current_user)) -> User:
-    """Get current admin user"""
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    return current_user
+def get_current_admin_user() -> Optional[User]:
+    """Public service layer - no authentication required"""
+    return None
 
 def create_refresh_token(data: Dict[str, Any]) -> str:
     """Create JWT refresh token"""

@@ -4,12 +4,13 @@ from datetime import datetime
 from typing import Dict, Any
 import logging
 import asyncio
+from sqlalchemy import text
 
 from app.services.mcp_service import MCPService
 from app.services.vector_service import VectorService
 from app.services.document_service import DocumentService
 from app.services.crawler_service import CrawlerService
-from app.database import get_db, redis_client
+from app.database import get_db
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -38,7 +39,6 @@ async def health_check():
         
         services = {
             'database': {'status': 'unknown', 'details': {}},
-            'redis': {'status': 'unknown', 'details': {}},
             'vector_store': {'status': 'unknown', 'details': {}},
             'ai_service': {'status': 'unknown', 'details': {}},
             'crawler': {'status': 'unknown', 'details': {}}
@@ -46,42 +46,23 @@ async def health_check():
         
         # Check database
         try:
-            db_gen = get_db()
-            db = next(db_gen)
-            db.execute("SELECT 1")
-            services['database'] = {
-                'status': 'healthy',
-                'details': {'connection': 'active'}
-            }
-        except Exception as e:
-            services['database'] = {
-                'status': 'unhealthy',
-                'details': {'error': str(e)}
-            }
-        finally:
+            from app.database import SessionLocal
+            db = SessionLocal()
             try:
-                db.close()
-            except:
-                pass
-        
-        # Check Redis
-        try:
-            if redis_client:
-                redis_client.ping()
-                services['redis'] = {
+                result = db.execute(text("SELECT 1"))
+                result.fetchone()  # Actually fetch the result
+                services['database'] = {
                     'status': 'healthy',
                     'details': {'connection': 'active'}
                 }
-            else:
-                services['redis'] = {
-                    'status': 'unhealthy',
-                    'details': {'error': 'Redis client not initialized'}
-                }
+            finally:
+                db.close()
         except Exception as e:
-            services['redis'] = {
+            services['database'] = {
                 'status': 'unhealthy',
                 'details': {'error': str(e)}
             }
+
         
         # Update services from health check
         if health_result.get('success'):
@@ -167,11 +148,14 @@ async def readiness_check():
         
         # Database check
         try:
-            db_gen = get_db()
-            db = next(db_gen)
-            db.execute("SELECT 1")
-            checks.append(True)
-            db.close()
+            from app.database import SessionLocal
+            db = SessionLocal()
+            try:
+                result = db.execute(text("SELECT 1"))
+                result.fetchone()  # Actually fetch the result
+                checks.append(True)
+            finally:
+                db.close()
         except:
             checks.append(False)
         

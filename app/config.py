@@ -9,15 +9,20 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
     # Database
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://user:pass@localhost:5432/counsel_db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./counsel.db")
     TEST_DATABASE_URL: str = os.getenv("TEST_DATABASE_URL", "sqlite:///./test_counsel.db")
     REDIS_URL: Optional[str] = os.getenv("REDIS_URL", None)
-    
+
     # Security
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-super-secret-key-here-change-in-production")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-    
+
+    # Authentication Control
+    ENABLE_AUTHENTICATION: bool = os.getenv("ENABLE_AUTHENTICATION", "false").lower() == "true"
+    DISABLE_AUTH_ROUTES: bool = os.getenv("DISABLE_AUTH_ROUTES", "true").lower() == "true"
+    ENABLE_SECURITY_MIDDLEWARE: bool = os.getenv("ENABLE_SECURITY_MIDDLEWARE", "false").lower() == "true"
+
     # AWS Bedrock
     AWS_ACCESS_KEY_ID: Optional[str] = os.getenv("AWS_ACCESS_KEY_ID")
     AWS_SECRET_ACCESS_KEY: Optional[str] = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -27,6 +32,9 @@ class Settings(BaseSettings):
     AWS_BEDROCK_MODEL_ID_PRIMARY: str = os.getenv("AWS_BEDROCK_MODEL_ID_PRIMARY", "us.anthropic.claude-sonnet-4-20250514-v1:0")
     AWS_BEDROCK_MODEL_ID_SECONDARY: str = os.getenv("AWS_BEDROCK_MODEL_ID_SECONDARY", "us.anthropic.claude-3-7-sonnet-20250219-v1:0")
     AWS_BEDROCK_MODEL_ID_FALLBACK: str = os.getenv("AWS_BEDROCK_MODEL_ID_FALLBACK", "mistral.mistral-large-2402-v1:0")
+
+    # AWS Bedrock Titan Embedding Model ID
+    AWS_BEDROCK_TITAN_EMBEDDING_MODEL_ID: str = os.getenv("AWS_BEDROCK_TITAN_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
 
     # AI Models
     HUGGING_FACE_TOKEN: Optional[str] = os.getenv("HUGGING_FACE_TOKEN")
@@ -41,6 +49,9 @@ class Settings(BaseSettings):
     # Vector Database
     CHROMA_PERSIST_DIRECTORY: str = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+
+    # S3 Conversation Cache
+    S3_CONVERSATION_CACHE_BUCKET: str = os.getenv("S3_CONVERSATION_CACHE_BUCKET", "counsel-ai-conversation-cache")
     
     # Application
     MAX_QUERY_LENGTH: int = int(os.getenv("MAX_QUERY_LENGTH", "2000"))

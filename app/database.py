@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-import redis
+# Redis removed - using PostgreSQL-only architecture
 import logging
 import os
 
@@ -37,23 +37,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
 
-# Redis setup - skip Redis in testing mode
-if IS_TESTING:
-    redis_client = None
-    logger.info("Redis disabled for testing")
-else:
-    try:
-        if settings.REDIS_URL:
-            redis_client = redis.from_url(settings.REDIS_URL, decode_responses=True)
-            # Test connection
-            redis_client.ping()
-            logger.info("Redis connection established successfully")
-        else:
-            redis_client = None
-            logger.info("Redis URL not provided, Redis disabled")
-    except Exception as e:
-        logger.error(f"Redis connection failed: {e}")
-        redis_client = None
+# Redis completely removed - using PostgreSQL-only architecture
+redis_client = None
+logger.info("Redis removed - using PostgreSQL-only architecture")
 
 def get_db():
     """Database dependency"""

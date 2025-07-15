@@ -76,8 +76,8 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         start_time = time.time()
 
         try:
-            # Skip security checks for docs endpoints
-            if request.url.path in ["/docs", "/redoc", "/openapi.json"]:
+            # Skip security checks for docs and health endpoints
+            if request.url.path in ["/docs", "/redoc", "/openapi.json", "/health", "/health/live"]:
                 response = await call_next(request)
                 return response
 

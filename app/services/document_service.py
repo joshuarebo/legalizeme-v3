@@ -78,7 +78,7 @@ class DocumentService:
             db.commit()
             
             # Generate embeddings
-            embeddings = self.ai_service.generate_embeddings(document.content)
+            embeddings = await self.ai_service.generate_embeddings(document.content)
             if embeddings:
                 document.embedding = embeddings
                 document.embedding_model = "all-MiniLM-L6-v2"
