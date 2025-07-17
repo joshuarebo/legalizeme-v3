@@ -146,9 +146,9 @@ def setup_middleware(app: FastAPI):
         https_only=settings.ENVIRONMENT == "production"
     )
     
-    # Add rate limiting
+    # Add rate limiting - PRODUCTION OPTIMIZED
     if settings.ENVIRONMENT == "production":
-        app.add_middleware(RateLimitMiddleware, calls=100, period=60)
+        app.add_middleware(RateLimitMiddleware, calls=500, period=60)  # Increased from 100 to 500
     
     # Add security headers
     app.add_middleware(SecurityMiddleware)
