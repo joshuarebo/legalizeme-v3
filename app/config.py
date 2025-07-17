@@ -79,12 +79,6 @@ class Settings(BaseSettings):
     MAX_RESPONSE_TIME_THRESHOLD: float = float(os.getenv("MAX_RESPONSE_TIME_THRESHOLD", "60.0"))
     MONITORING_WINDOW_SIZE: int = int(os.getenv("MONITORING_WINDOW_SIZE", "100"))  # Number of requests to track
 
-    # Rate Limiting Configuration
-    RATE_LIMIT_GENERAL_API: int = int(os.getenv("RATE_LIMIT_GENERAL_API", "1000"))  # requests per hour
-    RATE_LIMIT_AI_QUERIES: int = int(os.getenv("RATE_LIMIT_AI_QUERIES", "500"))    # requests per hour
-    RATE_LIMIT_DOCUMENTS: int = int(os.getenv("RATE_LIMIT_DOCUMENTS", "100"))      # requests per hour
-    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "500"))    # requests per minute
-
     # Orchestration Configuration
     ENABLE_INTELLIGENCE_ENHANCEMENT: bool = os.getenv("ENABLE_INTELLIGENCE_ENHANCEMENT", "true").lower() == "true"
     ENHANCEMENT_MODE: str = os.getenv("ENHANCEMENT_MODE", "standard")
