@@ -60,34 +60,34 @@ class RateLimiter:
     def _initialize_default_rules(self):
         """Initialize default rate limiting rules"""
         
-        # General API rate limit
+        # General API rate limit - PRODUCTION OPTIMIZED
         self.add_rule(RateLimitRule(
             name="general_api",
-            requests=100,
+            requests=1000,  # Increased from 100
             window=3600,  # 1 hour
             strategy=RateLimitStrategy.SLIDING_WINDOW,
-            burst_allowance=10,
+            burst_allowance=50,  # Increased from 10
             custom_message="API rate limit exceeded. Please try again later."
         ))
-        
-        # AI query rate limit
+
+        # AI query rate limit - PRODUCTION OPTIMIZED
         self.add_rule(RateLimitRule(
             name="ai_queries",
-            requests=50,
+            requests=500,  # Increased from 50
             window=3600,  # 1 hour
             strategy=RateLimitStrategy.TOKEN_BUCKET,
-            burst_allowance=5,
+            burst_allowance=25,  # Increased from 5
             exempt_roles=["admin", "premium"],
             custom_message="AI query rate limit exceeded. Upgrade to premium for higher limits."
         ))
-        
-        # Document generation rate limit
+
+        # Document generation rate limit - PRODUCTION OPTIMIZED
         self.add_rule(RateLimitRule(
             name="document_generation",
-            requests=20,
+            requests=100,  # Increased from 20
             window=3600,  # 1 hour
             strategy=RateLimitStrategy.SLIDING_WINDOW,
-            burst_allowance=2,
+            burst_allowance=10,  # Increased from 2
             exempt_roles=["admin", "premium"],
             custom_message="Document generation rate limit exceeded."
         ))
