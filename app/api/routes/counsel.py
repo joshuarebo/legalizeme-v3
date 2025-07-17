@@ -365,6 +365,40 @@ async def get_query_suggestions(
             "error": str(e)
         }
 
+@router.get("/suggestions")
+async def get_query_suggestions_alt(
+    query: str,
+    limit: int = 5
+):
+    """Get query suggestions based on partial input (alternative endpoint)"""
+    try:
+        # Enhanced suggestions for legal queries
+        base_suggestions = [
+            f"What are the legal requirements for {query} in Kenya?",
+            f"How to comply with {query} regulations in Kenya?",
+            f"What are the penalties for non-compliance with {query}?",
+            f"What documents are needed for {query} in Kenya?",
+            f"What are the procedures for {query} under Kenyan law?",
+            f"What are the rights and obligations regarding {query}?",
+            f"How does {query} affect employment law in Kenya?",
+            f"What are the constitutional provisions on {query}?"
+        ]
+
+        return {
+            "suggestions": base_suggestions[:limit],
+            "query": query,
+            "total_suggestions": len(base_suggestions[:limit])
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting suggestions: {e}")
+        return {
+            "suggestions": [],
+            "query": query,
+            "total_suggestions": 0,
+            "error": str(e)
+        }
+
 # Conversation Management Endpoints
 
 @router.post("/conversations", response_model=ConversationResponse)

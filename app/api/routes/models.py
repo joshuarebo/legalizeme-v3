@@ -300,8 +300,9 @@ async def debug_endpoint():
 async def get_model_config():
     """Get model configuration"""
     try:
-        # Public endpoint (no admin check since auth is removed)
-        
+        # Initialize AI service within the endpoint
+        ai_service = AIService()
+
         configs = {}
         for model_name, config in ai_service.model_configs.items():
             configs[model_name] = {
@@ -314,7 +315,7 @@ async def get_model_config():
                 'fine_tuned': config.fine_tuned,
                 'model_path': config.model_path
             }
-        
+
         return {
             'models': configs,
             'timestamp': datetime.utcnow().isoformat()

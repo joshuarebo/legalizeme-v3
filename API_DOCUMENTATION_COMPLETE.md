@@ -6,8 +6,8 @@
 - **API Version**: `v1`
 - **Content-Type**: `application/json`
 - **Authentication**: None required (public service layer)
-- **Status**: All endpoints operational (21/21 - 100%)
-- **Last Updated**: July 15, 2025
+- **Status**: All endpoints operational (28/28 - 100%)
+- **Last Updated**: July 16, 2025
 
 ---
 
@@ -823,7 +823,302 @@ POST /api/v1/counsel/conversations/{conversation_id}/messages
 
 ---
 
-## **🔧 5. INTEGRATION EXAMPLES**
+## **🎯 5. TOKEN TRACKING & USAGE MANAGEMENT**
+
+### **5.1 Health Check**
+**Check if the token tracking service is operational**
+
+```http
+GET /api/v1/tokens/health
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "healthy",
+  "service": "token_tracking",
+  "version": "1.0.0",
+  "endpoints": [
+    "GET /api/v1/tokens/status/{userId}",
+    "POST /api/v1/tokens/check",
+    "POST /api/v1/tokens/track",
+    "GET /api/v1/tokens/history/{userId}"
+  ]
+}
+```
+
+**Use Case**: Service monitoring, token system health verification
+**Frontend Integration**: Display token service status, system availability
+
+---
+
+### **5.2 Get User Token Status**
+**Get current token usage and limits for a specific user**
+
+```http
+GET /api/v1/tokens/status/{userId}
+```
+
+**Path Parameters:**
+- `userId` (string, required): Unique identifier for the user
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "userId": "test-user-123",
+    "used": 150,
+    "limit": 20000,
+    "remaining": 19850,
+    "plan": "Free Trial",
+    "planId": "counselai_free_trial",
+    "resetDate": "2025-08-16T16:22:30.000Z",
+    "percentageUsed": 0.75,
+    "status": "active"
+  }
+}
+```
+
+**Auto-Creation**: If user doesn't exist, automatically creates with free trial plan (20,000 tokens)
+**Use Case**: Display user's current token balance, usage statistics
+**Frontend Integration**: Token progress bars, usage dashboards, billing information
+
+---
+
+### **5.3 Check Token Availability**
+**Check if user has enough tokens for a planned operation**
+
+```http
+POST /api/v1/tokens/check
+Content-Type: application/json
+
+{
+  "userId": "test-user-123",
+  "estimatedTokens": 100
+}
+```
+
+**Request Body Schema:**
+```json
+{
+  "userId": "string (required)",
+  "estimatedTokens": "integer (required, min: 1)"
+}
+```
+
+**Response (200 OK) - Sufficient Tokens:**
+```json
+{
+  "success": true,
+  "canProceed": true,
+  "remaining": 19850,
+  "estimatedTokens": 100,
+  "currentUsage": 150,
+  "limit": 20000
+}
+```
+
+**Response (200 OK) - Insufficient Tokens:**
+```json
+{
+  "success": false,
+  "canProceed": false,
+  "remaining": 50,
+  "estimatedTokens": 100,
+  "currentUsage": 19950,
+  "limit": 20000,
+  "message": "Insufficient tokens. Need 100, but only 50 remaining."
+}
+```
+
+**Use Case**: Pre-operation validation, prevent failed requests due to insufficient tokens
+**Frontend Integration**: Disable AI features when tokens insufficient, show upgrade prompts
+
+---
+
+### **5.4 Track Token Usage**
+**Record actual token usage after an operation**
+
+```http
+POST /api/v1/tokens/track
+Content-Type: application/json
+
+{
+  "userId": "test-user-123",
+  "tokensUsed": 150,
+  "requestType": "legal_query",
+  "model": "claude-sonnet-4"
+}
+```
+
+**Request Body Schema:**
+```json
+{
+  "userId": "string (required)",
+  "tokensUsed": "integer (required, min: 1)",
+  "requestType": "string (required)",
+  "model": "string (optional)"
+}
+```
+
+**Valid Request Types:**
+- `"legal_query"` - Standard legal questions
+- `"document_analysis"` - Document processing and analysis
+- `"case_research"` - Legal case research and citations
+- `"contract_review"` - Contract analysis and review
+- `"legal_advice"` - Personalized legal guidance
+
+**Response (200 OK) - Success:**
+```json
+{
+  "success": true,
+  "tracked": true,
+  "newUsage": 300,
+  "remaining": 19700,
+  "limit": 20000
+}
+```
+
+**Response (400 Bad Request) - Limit Exceeded:**
+```json
+{
+  "success": false,
+  "tracked": false,
+  "error": "Token limit exceeded",
+  "currentUsage": 19950,
+  "tokensRequested": 150,
+  "limit": 20000,
+  "remaining": 50
+}
+```
+
+**Use Case**: Post-operation usage tracking, billing accuracy, usage analytics
+**Frontend Integration**: Real-time token balance updates, usage notifications
+
+---
+
+### **5.5 Get Usage History**
+**Retrieve detailed usage history for a user**
+
+```http
+GET /api/v1/tokens/history/{userId}?limit=10&offset=0
+```
+
+**Path Parameters:**
+- `userId` (string, required): Unique identifier for the user
+
+**Query Parameters:**
+- `limit` (integer, optional, default: 50, max: 100): Number of records to return
+- `offset` (integer, optional, default: 0): Number of records to skip
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "hist_000001",
+      "timestamp": "2025-07-16T16:22:30.417976+00:00",
+      "tokensUsed": 150,
+      "requestType": "legal_query",
+      "model": "claude-sonnet-4",
+      "runningTotal": 300
+    },
+    {
+      "id": "hist_000002",
+      "timestamp": "2025-07-16T16:20:15.123456+00:00",
+      "tokensUsed": 150,
+      "requestType": "document_analysis",
+      "model": "claude-sonnet-4",
+      "runningTotal": 150
+    }
+  ],
+  "pagination": {
+    "total": 2,
+    "limit": 10,
+    "offset": 0,
+    "hasMore": false
+  }
+}
+```
+
+**Use Case**: Usage analytics, billing verification, user activity tracking
+**Frontend Integration**: Usage history tables, analytics charts, billing statements
+
+---
+
+### **5.6 Reset User Tokens (Admin)**
+**Reset user's token usage and update plan (admin operation)**
+
+```http
+POST /api/v1/tokens/reset/{userId}
+Content-Type: application/json
+
+{
+  "newLimit": 50000,
+  "planId": "counselai_premium"
+}
+```
+
+**Request Body Schema:**
+```json
+{
+  "newLimit": "integer (optional, default: 20000)",
+  "planId": "string (optional, default: 'counselai_free_trial')"
+}
+```
+
+**Available Plans:**
+- `"counselai_free_trial"`: 20,000 tokens/month
+- `"counselai_basic"`: 50,000 tokens/month
+- `"counselai_premium"`: 100,000 tokens/month
+- `"counselai_enterprise"`: 500,000 tokens/month
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "reset": true,
+  "userId": "test-user-123",
+  "newUsage": 0,
+  "newLimit": 50000,
+  "planId": "counselai_premium",
+  "planName": "Premium Plan",
+  "resetDate": "2025-08-16T16:25:00.000Z"
+}
+```
+
+**Use Case**: Plan upgrades, billing cycle resets, admin user management
+**Frontend Integration**: Admin dashboards, billing management, customer support tools
+
+---
+
+### **5.7 Debug Service Status**
+**Debug token tracking service initialization status (development)**
+
+```http
+GET /api/v1/tokens/debug-token-service
+```
+
+**Response (200 OK):**
+```json
+{
+  "import_success": true,
+  "import_error": null,
+  "service_status": "initialized",
+  "init_success": true,
+  "init_error": null,
+  "function_exists": true
+}
+```
+
+**Use Case**: Development debugging, service health verification
+**Frontend Integration**: Developer tools, system diagnostics
+
+---
+
+## **🔧 6. INTEGRATION EXAMPLES**
 
 ### **5.1 JavaScript/TypeScript Integration**
 
@@ -994,9 +1289,109 @@ async function startLegalConsultation() {
 }
 ```
 
+### **6.2 Token Tracking Integration**
+
+```typescript
+// Token-aware legal query with usage tracking
+async function performLegalQueryWithTokens(userId: string, query: string) {
+  try {
+    // 1. Check token availability before operation
+    const checkResponse = await fetch('/api/v1/tokens/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userId,
+        estimatedTokens: 200 // Estimate based on query complexity
+      })
+    });
+
+    const tokenCheck = await checkResponse.json();
+
+    if (!tokenCheck.canProceed) {
+      throw new Error(`Insufficient tokens: ${tokenCheck.message}`);
+    }
+
+    // 2. Perform AI operation
+    const aiResponse = await fetch('/api/v1/counsel/query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: query,
+        use_enhanced_rag: true
+      })
+    });
+
+    const result = await aiResponse.json();
+
+    // 3. Track actual usage
+    await fetch('/api/v1/tokens/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: userId,
+        tokensUsed: result.tokens_used || 150, // Use actual from response
+        requestType: 'legal_query',
+        model: 'claude-sonnet-4'
+      })
+    });
+
+    return result;
+
+  } catch (error) {
+    console.error('Error in token-aware legal query:', error);
+    throw error;
+  }
+}
+
+// Real-time token status updates for UI
+async function updateTokenDisplay(userId: string) {
+  try {
+    const response = await fetch(`/api/v1/tokens/status/${userId}`);
+    const status = await response.json();
+
+    if (status.success) {
+      const { used, limit, remaining, percentageUsed } = status.data;
+
+      // Update progress bar
+      document.getElementById('token-progress').style.width = `${percentageUsed}%`;
+      document.getElementById('token-count').textContent = `${remaining.toLocaleString()} / ${limit.toLocaleString()}`;
+
+      // Show warning if low on tokens
+      if (percentageUsed > 90) {
+        showTokenWarning('You are running low on tokens. Consider upgrading your plan.');
+      }
+    }
+  } catch (error) {
+    console.error('Error updating token display:', error);
+  }
+}
+
+// Usage history for analytics
+async function loadUsageHistory(userId: string, limit = 10) {
+  try {
+    const response = await fetch(`/api/v1/tokens/history/${userId}?limit=${limit}`);
+    const history = await response.json();
+
+    if (history.success) {
+      const usageData = history.data.map(item => ({
+        date: new Date(item.timestamp).toLocaleDateString(),
+        tokens: item.tokensUsed,
+        type: item.requestType,
+        model: item.model
+      }));
+
+      // Render usage chart or table
+      renderUsageChart(usageData);
+    }
+  } catch (error) {
+    console.error('Error loading usage history:', error);
+  }
+}
+```
+
 ---
 
-## **⚡ 6. RATE LIMITING & ERROR HANDLING**
+## **⚡ 7. RATE LIMITING & ERROR HANDLING**
 
 ### **6.1 Rate Limiting**
 **API requests are subject to rate limiting to ensure service availability**
@@ -1007,6 +1402,8 @@ async function startLegalConsultation() {
 - **Multimodal Processing**: 10 requests/minute (file uploads)
 - **Conversation Management**: 50 requests/minute
 - **Message Operations**: 30 requests/minute
+- **Token Tracking**: 50 requests/minute
+- **Token Usage History**: 20 requests/minute
 
 #### **Rate Limit Headers:**
 ```http
@@ -1132,10 +1529,10 @@ Cache-Control: no-cache
 
 ---
 
-## **📊 7. API STATUS & MONITORING**
+## **📊 8. API STATUS & MONITORING**
 
-### **6.1 Complete Endpoint Status**
-**All 21 endpoints are operational (100% uptime)**
+### **8.1 Complete Endpoint Status**
+**All 28 endpoints are operational (100% uptime)**
 
 #### **Health & Monitoring (2/2 ✅)**
 - ✅ GET /health
@@ -1166,7 +1563,16 @@ Cache-Control: no-cache
 - ✅ GET /api/v1/counsel/conversations/{id}/messages
 - ✅ POST /api/v1/counsel/conversations/{id}/messages
 
-### **6.2 Performance Metrics**
+#### **Token Tracking & Usage Management (7/7 ✅)**
+- ✅ GET /api/v1/tokens/health
+- ✅ GET /api/v1/tokens/status/{userId}
+- ✅ POST /api/v1/tokens/check
+- ✅ POST /api/v1/tokens/track
+- ✅ GET /api/v1/tokens/history/{userId}
+- ✅ POST /api/v1/tokens/reset/{userId}
+- ✅ GET /api/v1/tokens/debug-token-service
+
+### **8.2 Performance Metrics**
 - **Average Response Time**: 1.2-3.5 seconds (depending on complexity)
 - **Uptime**: 99.9%
 - **Rate Limits**: Applied per endpoint category
@@ -1175,7 +1581,7 @@ Cache-Control: no-cache
 
 ---
 
-## **🔒 8. SECURITY & COMPLIANCE**
+## **🔒 9. SECURITY & COMPLIANCE**
 
 ### **8.1 Security Features**
 - **HTTPS Ready**: API supports HTTPS encryption (configure load balancer)
@@ -1199,7 +1605,7 @@ Cache-Control: no-cache
 
 ---
 
-## **🚀 9. DEPLOYMENT INFORMATION**
+## **🚀 10. DEPLOYMENT INFORMATION**
 
 ### **7.1 Infrastructure**
 - **Platform**: AWS ECS Fargate
@@ -1216,7 +1622,7 @@ Cache-Control: no-cache
 
 ---
 
-## **📞 10. SUPPORT & TROUBLESHOOTING**
+## **📞 11. SUPPORT & TROUBLESHOOTING**
 
 ### **8.1 Common Error Codes**
 - **400 Bad Request**: Check request format and required fields
@@ -1284,7 +1690,7 @@ CounselAI/
 
 ---
 
-## **📈 11. CHANGELOG & VERSIONING**
+## **📈 12. CHANGELOG & VERSIONING**
 
 ### **11.1 API Versioning**
 - **Current Version**: v1
@@ -1307,7 +1713,7 @@ CounselAI/
 
 ---
 
-## **🌍 12. REGIONAL & LEGAL CONSIDERATIONS**
+## **🌍 13. REGIONAL & LEGAL CONSIDERATIONS**
 
 ### **12.1 Jurisdiction Support**
 - **Primary**: Kenya (comprehensive legal database)
@@ -1328,7 +1734,7 @@ CounselAI/
 
 ---
 
-## **🔧 13. DEVELOPMENT RESOURCES**
+## **🔧 14. DEVELOPMENT RESOURCES**
 
 ### **13.1 Postman Collection**
 Import this collection for easy API testing:

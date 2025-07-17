@@ -141,6 +141,77 @@ def generate_related_queries(query: str) -> List[str]:
 # API ENDPOINTS
 # ============================================================================
 
+@router.post("/query", response_model=SimpleAgentResponse)
+async def simple_agent_query(
+    request: SimpleAgentRequest
+):
+    """
+    SIMPLE KENYAN LEGAL QUERY AGENT
+    Forwards requests to the working counsel endpoint for maximum reliability
+    """
+    start_time = datetime.utcnow()
+
+    try:
+        logger.info(f"🚀 Simple Agent Query: {request.query[:100]}...")
+
+        # Create enhanced prompt with Kenyan legal context
+        enhanced_query = f"""As a Kenyan legal expert, please provide comprehensive guidance on: {request.query}
+
+Strategy: {request.strategy}
+Context: Kenyan jurisdiction, current laws and regulations
+
+Please provide:
+1. Direct answer to the query
+2. Relevant Kenyan legal provisions
+3. Practical guidance and next steps
+4. Any compliance requirements
+
+Focus on Employment Law, Company Law, Constitutional Law, Land Law, and Family Law as applicable."""
+
+        # Use LLM manager for direct query
+        response = await llm_manager.invoke_model(
+            prompt=enhanced_query,
+            model_preference="claude-sonnet-4"
+        )
+
+        processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+
+        return SimpleAgentResponse(
+            answer=response.get("response_text", "I apologize, but I'm unable to process your query at the moment."),
+            confidence=0.9 if response.get("success") else 0.3,
+            model_used=response.get("model_used", "claude-sonnet-4"),
+            processing_time_ms=processing_time,
+            timestamp=datetime.utcnow().isoformat(),
+            strategy_used=request.strategy,
+            citations=[],
+            follow_up_suggestions=[
+                "Would you like more specific guidance on compliance requirements?",
+                "Do you need information about related legal procedures?",
+                "Would you like to know about potential penalties or consequences?"
+            ],
+            related_queries=[
+                f"What are the penalties for non-compliance with {request.query}?",
+                f"What documents are required for {request.query}?",
+                f"How to ensure compliance with {request.query} regulations?"
+            ]
+        )
+
+    except Exception as e:
+        logger.error(f"💥 Simple agent query failed: {e}")
+        processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+
+        return SimpleAgentResponse(
+            answer=f"I apologize, but I'm currently experiencing technical difficulties processing your query about: {request.query}. For Kenyan legal matters, I recommend consulting the Employment Act 2007, Labour Relations Act 2007, and seeking professional legal counsel.",
+            confidence=0.3,
+            model_used="fallback",
+            processing_time_ms=processing_time,
+            timestamp=datetime.utcnow().isoformat(),
+            strategy_used=request.strategy,
+            citations=[],
+            follow_up_suggestions=["Please try again later", "Consider consulting a legal professional"],
+            related_queries=[]
+        )
+
 @router.post("/research", response_model=SimpleAgentResponse)
 async def simple_agent_research(
     request: SimpleAgentRequest

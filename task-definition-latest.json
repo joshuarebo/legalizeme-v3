@@ -1,0 +1,85 @@
+{
+  "family": "counsel-task",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::585008043505:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "counsel-container",
+      "image": "585008043505.dkr.ecr.us-east-1.amazonaws.com/counsel-ai:latest",
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/counsel-task",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "environment": [
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_DEFAULT_REGION",
+          "value": "us-east-1"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_PRIMARY",
+          "value": "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_SECONDARY",
+          "value": "us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+        },
+        {
+          "name": "AWS_BEDROCK_MODEL_ID_FALLBACK",
+          "value": "mistral.mistral-large-2402-v1:0"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "INFO"
+        },
+        {
+          "name": "DEBUG",
+          "value": "false"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:AWS_ACCESS_KEY_ID::"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:AWS_SECRET_ACCESS_KEY::"
+        },
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:DATABASE_URL::"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:SECRET_KEY::"
+        },
+        {
+          "name": "HUGGING_FACE_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:HUGGING_FACE_TOKEN::"
+        }
+      ]
+    }
+  ]
+}
