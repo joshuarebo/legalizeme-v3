@@ -1,5 +1,5 @@
 {
-  "family": "counsel-task",
+  "family": "counsel-task-rate-limit-fix",
   "requiresCompatibilities": ["FARGATE"],
   "networkMode": "awsvpc",
   "cpu": "1024",
@@ -56,28 +56,26 @@
         {
           "name": "DEBUG",
           "value": "false"
-        }
-      ],
-      "secrets": [
+        },
         {
           "name": "AWS_ACCESS_KEY_ID",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:AWS_ACCESS_KEY_ID::"
+          "value": "${AWS_ACCESS_KEY_ID}"
         },
         {
           "name": "AWS_SECRET_ACCESS_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:AWS_SECRET_ACCESS_KEY::"
+          "value": "${AWS_SECRET_ACCESS_KEY}"
         },
         {
           "name": "DATABASE_URL",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:DATABASE_URL::"
+          "value": "${DATABASE_URL}"
         },
         {
           "name": "SECRET_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:SECRET_KEY::"
+          "value": "${SECRET_KEY}"
         },
         {
           "name": "HUGGING_FACE_TOKEN",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:585008043505:secret:counsel-ai-secrets:HUGGING_FACE_TOKEN::"
+          "value": "${HUGGING_FACE_TOKEN}"
         }
       ]
     }
