@@ -79,26 +79,41 @@ class ConversationService:
             return None
     
     def get_user_conversations(
-        self, 
-        db: Session, 
+        self,
+        db: Session,
         user_id: str,
         limit: int = 20,
         offset: int = 0,
         active_only: bool = True
     ) -> List[Conversation]:
-        """Get conversations for a user"""
+        """Get conversations for a user with improved error handling"""
         try:
+            # Validate user_id
+            if not user_id or user_id == "None":
+                logger.warning(f"Invalid user_id provided: {user_id}")
+                return []
+
+            # Ensure session is active
+            if not db.is_active:
+                logger.warning("Database session is not active")
+                return []
+
             query = db.query(Conversation).filter(Conversation.user_id == user_id)
-            
+
             if active_only:
                 query = query.filter(Conversation.is_active == True)
-            
+
             conversations = query.order_by(desc(Conversation.updated_at)).offset(offset).limit(limit).all()
-            
+
             return conversations
-            
+
         except Exception as e:
             logger.error(f"Error getting conversations for user {user_id}: {e}")
+            # Ensure session is rolled back on error
+            try:
+                db.rollback()
+            except Exception as rollback_error:
+                logger.error(f"Error during rollback: {rollback_error}")
             return []
     
     def add_message(

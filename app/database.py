@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.pool import QueuePool, StaticPool
 # Redis removed - using PostgreSQL-only architecture
 import logging
 import os
@@ -16,24 +16,37 @@ IS_TESTING = os.getenv("TESTING", "false").lower() == "true" or "pytest" in os.g
 # Database setup - use test database for testing
 database_url = settings.TEST_DATABASE_URL if IS_TESTING else settings.DATABASE_URL
 
-engine_kwargs = {
-    "poolclass": StaticPool,
-    "pool_pre_ping": True,
-    "echo": True if settings.ENVIRONMENT == "development" else False
-}
-
-# SQLite specific configuration for testing
+# Production-optimized PostgreSQL configuration
 if IS_TESTING and database_url.startswith("sqlite"):
-    engine_kwargs.update({
+    # SQLite configuration for testing
+    engine_kwargs = {
+        "poolclass": StaticPool,
         "connect_args": {"check_same_thread": False},
-        "pool_recycle": -1
-    })
+        "pool_pre_ping": True,
+        "pool_recycle": -1,
+        "echo": True if settings.ENVIRONMENT == "development" else False
+    }
 else:
-    engine_kwargs["pool_recycle"] = 300
+    # PostgreSQL production configuration - fixes session management issues
+    engine_kwargs = {
+        "poolclass": QueuePool,
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_pre_ping": True,
+        "pool_recycle": 3600,  # 1 hour instead of 5 minutes
+        "pool_timeout": 30,
+        "echo": False,  # Disable echo in production for performance
+        "isolation_level": "READ_COMMITTED"  # Explicit isolation level
+    }
 
 engine = create_engine(database_url, **engine_kwargs)
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    bind=engine,
+    expire_on_commit=False  # Prevent session expiration issues
+)
 
 Base = declarative_base()
 
@@ -42,10 +55,14 @@ redis_client = None
 logger.info("Redis removed - using PostgreSQL-only architecture")
 
 def get_db():
-    """Database dependency"""
+    """Database dependency with improved error handling"""
     db = SessionLocal()
     try:
         yield db
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        db.rollback()
+        raise
     finally:
         db.close()
 

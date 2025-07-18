@@ -114,10 +114,21 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             logger.error(f"Security middleware error: {e}")
             self.metrics['security_violations'] += 1
-            
+
+            # Don't expose internal errors to clients
+            error_message = "Internal security error"
+
+            # Handle specific database connection errors gracefully
+            if "connection already closed" in str(e).lower():
+                logger.warning("Database connection closed during request processing")
+                error_message = "Service temporarily unavailable"
+            elif "set_session cannot be used inside a transaction" in str(e).lower():
+                logger.warning("Database session transaction error")
+                error_message = "Service temporarily unavailable"
+
             return JSONResponse(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"error": "Internal security error"}
+                content={"error": error_message}
             )
     
     async def _pre_request_security_check(self, request: Request) -> Dict[str, Any]:
