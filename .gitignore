@@ -101,6 +101,10 @@ credentials/
 *.pfx
 task-definition.json
 task-definition-production.json
+task-definition-clean.json
+task-definition-latest.json
+task-definition-phase2.json
+secrets-manager-policy.json
 
 # Deployment scripts with secrets
 create-infrastructure.ps1

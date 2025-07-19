@@ -66,6 +66,8 @@ class Settings(BaseSettings):
     MODEL_CACHE_TTL: int = int(os.getenv("MODEL_CACHE_TTL", "3600"))  # 1 hour
     MAX_MODEL_RETRIES: int = int(os.getenv("MAX_MODEL_RETRIES", "3"))
     MODEL_TIMEOUT: int = int(os.getenv("MODEL_TIMEOUT", "60"))  # seconds
+    AGENT_TIMEOUT: int = int(os.getenv("AGENT_TIMEOUT", "45"))  # seconds - shorter for production
+    STREAMING_TIMEOUT: int = int(os.getenv("STREAMING_TIMEOUT", "120"))  # seconds - longer for streaming
 
     # Fine-tuning Configuration
     FINE_TUNE_BATCH_SIZE: int = int(os.getenv("FINE_TUNE_BATCH_SIZE", "2"))
