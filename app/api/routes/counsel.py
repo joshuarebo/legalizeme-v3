@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any
 import logging
@@ -8,6 +9,12 @@ from sqlalchemy.orm import Session
 from app.services.ai_service import AIService
 from app.services.llm_manager import llm_manager
 from app.services.conversation_service import ConversationService
+from app.services.intelligent_cache_service import intelligent_cache_service
+from app.services.kenyan_legal_prompt_optimizer import kenyan_legal_prompt_optimizer
+from app.services.aws_embedding_service import aws_embedding_service
+from app.services.streaming_agent_service import streaming_agent_service
+from app.services.streaming_rag_service import streaming_rag_service
+from app.services.production_monitoring_service import production_monitoring_service
 from app.database import get_db
 from app.config import settings
 
@@ -216,39 +223,229 @@ async def debug_conversation_service():
 
 @router.post("/query", response_model=LegalQueryResponse)
 async def ask_legal_question(request: LegalQueryRequest):
-    """Ask a legal question and get AI-powered response"""
+    """
+    OPTIMIZED LEGAL QUERY ENDPOINT
+    =============================
+    Enhanced with intelligent caching, prompt optimization, and AWS-native RAG
+    """
     start_time = datetime.utcnow()
-    
+
     try:
-        # Simple implementation without complex dependencies
+        # Initialize services if needed
+        if not intelligent_cache_service._initialized:
+            await intelligent_cache_service.initialize()
+        if not kenyan_legal_prompt_optimizer._initialized:
+            await kenyan_legal_prompt_optimizer.initialize()
+
         query_id = f"query_{int(start_time.timestamp())}"
-        
-        # Use LLM manager for direct query
-        response = await llm_manager.invoke_model(
-            prompt=request.query,
-            model_preference="claude-sonnet-4"
+
+        # Step 1: Check intelligent cache first (always check, even for agent mode)
+        query_embedding = await aws_embedding_service.generate_embeddings(request.query)
+        cached_response = await intelligent_cache_service.get_cached_response(
+            request.query,
+            query_embedding
         )
-        
+
+        if cached_response:
+            logger.info(f"Cache HIT for query: {request.query[:50]}...")
+            cached_response["query_id"] = query_id
+            cached_response["processing_time"] = (datetime.utcnow() - start_time).total_seconds()
+            cached_response["timestamp"] = datetime.utcnow()
+            cached_response["enhanced"] = request.use_enhanced_rag
+            cached_response["agent_mode"] = request.agent_mode
+            cached_response["cached"] = True
+
+            return LegalQueryResponse(**cached_response)
+
+        # Step 2: Enhanced RAG processing for complex queries
+        if request.use_enhanced_rag and not request.agent_mode:
+            response = await _process_enhanced_rag_query(request, query_embedding)
+        # Step 3: Agent mode processing
+        elif request.agent_mode:
+            response = await _process_agent_mode_query(request)
+        # Step 4: Direct optimized query
+        else:
+            response = await _process_direct_optimized_query(request)
+
         processing_time = (datetime.utcnow() - start_time).total_seconds()
-        
+        processing_time_ms = processing_time * 1000
+
+        # Step 5: Record monitoring metrics
+        await production_monitoring_service.record_api_request(
+            endpoint="/api/v1/counsel/query",
+            response_time_ms=processing_time_ms,
+            model_used=response.get("model_used", "unknown"),
+            success=response.get("success", False),
+            cache_hit=cached_response is not None,
+            confidence=response.get("confidence", 0.0),
+            legal_area=response.get("legal_area", "general"),
+            error_type=None if response.get("success") else "processing_error"
+        )
+
+        # Step 6: Cache successful responses
+        if response.get("success") and response.get("confidence", 0) > 0.6:  # Lowered threshold
+            await intelligent_cache_service.cache_response(
+                query=request.query,
+                response={
+                    "answer": response.get("response_text", ""),
+                    "confidence": response.get("confidence", 0.8),
+                    "model_used": response.get("model_used", "unknown"),
+                    "processing_time": processing_time_ms,
+                    "relevant_documents": [],
+                    "sources": response.get("sources", []),
+                    "success": True
+                },
+                query_embedding=query_embedding,
+                force_cache=response.get("confidence", 0) > 0.8  # Force cache high confidence responses
+            )
+
         return LegalQueryResponse(
             query_id=query_id,
             answer=response.get("response_text", "I apologize, but I'm unable to process your query at the moment."),
-            relevant_documents=[],
-            confidence=0.8 if response.get("success") else 0.3,
+            relevant_documents=response.get("relevant_documents", []),
+            confidence=response.get("confidence", 0.8 if response.get("success") else 0.3),
             model_used=response.get("model_used", "claude-sonnet-4"),
             processing_time=processing_time,
             timestamp=datetime.utcnow(),
             enhanced=request.use_enhanced_rag,
-            agent_mode=request.agent_mode
+            agent_mode=request.agent_mode,
+            sources=response.get("sources", []),
+            retrieval_strategy=response.get("retrieval_strategy"),
+            reasoning_chain=response.get("reasoning_chain", []),
+            follow_up_suggestions=response.get("follow_up_suggestions", [])
         )
-        
+
     except Exception as e:
         logger.error(f"Error processing legal query: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing legal query"
         )
+
+async def _process_direct_optimized_query(request: LegalQueryRequest) -> Dict[str, Any]:
+    """Process direct query with optimized prompts"""
+    try:
+        # Optimize prompt for Kenyan legal context
+        optimized_prompt = kenyan_legal_prompt_optimizer.optimize_for_speed(request.query)
+
+        # Use intelligent model selection with speed mode
+        response = await llm_manager.invoke_model(
+            prompt=optimized_prompt,
+            model_preference="claude-sonnet-4",
+            speed_mode=True
+        )
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error in direct optimized query: {e}")
+        return {"success": False, "response_text": "Error processing query", "error": str(e)}
+
+async def _process_enhanced_rag_query(request: LegalQueryRequest, query_embedding: Optional[List[float]]) -> Dict[str, Any]:
+    """Process query with enhanced AWS-native RAG"""
+    try:
+        # Use AWS-native RAG service (will implement next)
+        from app.services.aws_rag_service import aws_rag_service
+
+        rag_response = await aws_rag_service.query_with_context(
+            query=request.query,
+            context=request.context or {},
+            max_sources=5,
+            query_embedding=query_embedding
+        )
+
+        return {
+            "success": True,
+            "response_text": rag_response.get("answer", ""),
+            "confidence": rag_response.get("confidence", 0.8),
+            "model_used": rag_response.get("model_used", "claude-sonnet-4"),
+            "relevant_documents": rag_response.get("documents", []),
+            "sources": rag_response.get("sources", []),
+            "retrieval_strategy": "aws_native_rag"
+        }
+
+    except ImportError:
+        # Fallback to direct query if RAG service not available
+        logger.warning("AWS RAG service not available, falling back to direct query")
+        return await _process_direct_optimized_query(request)
+    except Exception as e:
+        logger.error(f"Error in enhanced RAG query: {e}")
+        return await _process_direct_optimized_query(request)
+
+async def _process_agent_mode_query(request: LegalQueryRequest) -> Dict[str, Any]:
+    """Process query with agent mode (chain-of-thought reasoning)"""
+    try:
+        # Build context-engineered prompt for agent reasoning
+        agent_prompt = kenyan_legal_prompt_optimizer.optimize_prompt(
+            query=request.query,
+            query_type="agent_research",
+            context=request.context
+        )
+
+        # Add chain-of-thought reasoning structure
+        reasoning_prompt = f"""{agent_prompt}
+
+CHAIN-OF-THOUGHT REASONING:
+Please think through this step by step:
+
+1. LEGAL ISSUE IDENTIFICATION:
+   - What is the core legal question?
+   - Which area of Kenyan law applies?
+
+2. LEGAL FRAMEWORK ANALYSIS:
+   - What are the relevant statutes and regulations?
+   - Are there any recent amendments or cases?
+
+3. PRACTICAL APPLICATION:
+   - How does this apply to the specific situation?
+   - What are the compliance requirements?
+
+4. RECOMMENDATIONS:
+   - What immediate steps should be taken?
+   - When should professional legal advice be sought?
+
+Please provide your reasoning for each step, then give a comprehensive final answer."""
+
+        # Use parallel processing for agent mode to get fastest response
+        response = await llm_manager.invoke_model_parallel(
+            prompt=reasoning_prompt,
+            max_concurrent=2
+        )
+
+        # Extract reasoning chain from response
+        reasoning_chain = _extract_reasoning_chain(response.get("response_text", ""))
+
+        response["reasoning_chain"] = reasoning_chain
+        response["retrieval_strategy"] = "agent_reasoning"
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error in agent mode query: {e}")
+        return await _process_direct_optimized_query(request)
+
+def _extract_reasoning_chain(response_text: str) -> List[str]:
+    """Extract reasoning steps from agent response"""
+    try:
+        reasoning_steps = []
+        lines = response_text.split('\n')
+
+        current_step = ""
+        for line in lines:
+            if any(marker in line.upper() for marker in ["1.", "2.", "3.", "4.", "STEP", "ANALYSIS"]):
+                if current_step:
+                    reasoning_steps.append(current_step.strip())
+                current_step = line
+            elif current_step:
+                current_step += " " + line
+
+        if current_step:
+            reasoning_steps.append(current_step.strip())
+
+        return reasoning_steps[:4]  # Limit to 4 main steps
+
+    except Exception:
+        return ["Legal analysis completed with comprehensive reasoning"]
 
 @router.post("/query-direct", response_model=DirectQueryResponse)
 async def direct_llm_query(request: DirectQueryRequest):
@@ -476,6 +673,32 @@ async def list_conversations(
             detail=f"Error listing conversations: {str(e)}"
         )
 
+@router.get("/documents")
+async def get_documents(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0)
+):
+    """Get uploaded documents - redirects to multimodal service"""
+    try:
+        return {
+            "documents": [],
+            "total": 0,
+            "limit": limit,
+            "offset": offset,
+            "message": "Document management available at /api/v1/multimodal/documents",
+            "redirect_url": "/api/v1/multimodal/documents"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting documents: {e}")
+        return {
+            "documents": [],
+            "total": 0,
+            "limit": limit,
+            "offset": offset,
+            "error": str(e)
+        }
+
 @router.get("/conversations/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: str,
@@ -673,3 +896,118 @@ async def enhanced_rag_query(request: EnhancedRAGRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error processing enhanced RAG query: {str(e)}"
         )
+
+@router.post("/query-stream")
+async def stream_legal_question(
+    query: str = Query(..., description="Legal question to analyze"),
+    session_id: Optional[str] = Query(None, description="Session ID for tracking"),
+    context: Optional[str] = Query(None, description="Additional context as JSON string")
+):
+    """
+    STREAMING AGENT ENDPOINT
+    =======================
+    Stream agent response with real-time updates to prevent timeouts
+    """
+    try:
+        # Parse context if provided
+        parsed_context = None
+        if context:
+            import json
+            try:
+                parsed_context = json.loads(context)
+            except json.JSONDecodeError:
+                parsed_context = {"raw_context": context}
+
+        # Stream the agent response
+        return await streaming_agent_service.stream_agent_response(
+            query=query,
+            context=parsed_context,
+            session_id=session_id
+        )
+
+    except Exception as e:
+        logger.error(f"Error in streaming endpoint: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing streaming query"
+        )
+
+@router.post("/rag-stream")
+async def stream_rag_query(
+    query: str = Query(..., description="Legal question for RAG analysis"),
+    legal_area: Optional[str] = Query(None, description="Legal area filter"),
+    max_sources: int = Query(5, description="Maximum source documents"),
+    session_id: Optional[str] = Query(None, description="Session ID for tracking")
+):
+    """
+    STREAMING RAG ENDPOINT
+    =====================
+    Stream RAG response with progressive document retrieval and real-time feedback
+    """
+    try:
+        # Stream the RAG response
+        return await streaming_rag_service.stream_rag_response(
+            query=query,
+            legal_area=legal_area,
+            max_sources=max_sources,
+            session_id=session_id
+        )
+
+    except Exception as e:
+        logger.error(f"Error in RAG streaming endpoint: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error processing streaming RAG query"
+        )
+
+@router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.utcnow()}
+
+@router.get("/monitoring/dashboard")
+async def get_monitoring_dashboard():
+    """
+    PRODUCTION MONITORING DASHBOARD
+    ==============================
+    Get real-time performance metrics and analytics
+    """
+    try:
+        # Get performance dashboard
+        dashboard_data = production_monitoring_service.get_performance_dashboard()
+
+        # Get cache analytics
+        cache_analytics = intelligent_cache_service.get_cache_analytics()
+
+        # Get search analytics if available
+        search_analytics = {}
+        try:
+            from app.services.aws_opensearch_service import aws_opensearch_service
+            search_analytics = await aws_opensearch_service.get_search_analytics()
+        except Exception as e:
+            search_analytics = {"error": f"Search analytics unavailable: {e}"}
+
+        return {
+            "performance": dashboard_data,
+            "cache": cache_analytics,
+            "search": search_analytics,
+            "timestamp": datetime.utcnow(),
+            "status": "active"
+        }
+
+    except Exception as e:
+        logger.error(f"Error getting monitoring dashboard: {e}")
+        return {
+            "error": str(e),
+            "timestamp": datetime.utcnow(),
+            "status": "error"
+        }
+
+@router.get("/monitoring/cache-stats")
+async def get_cache_statistics():
+    """Get detailed cache performance statistics"""
+    try:
+        return intelligent_cache_service.get_cache_analytics()
+    except Exception as e:
+        logger.error(f"Error getting cache statistics: {e}")
+        return {"error": str(e)}

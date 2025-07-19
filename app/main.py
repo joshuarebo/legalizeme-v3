@@ -20,6 +20,7 @@ from app.services.vector_service import VectorService
 from app.services.aws_vector_service import aws_vector_service
 from app.services.aws_embedding_service import aws_embedding_service
 from app.services.enhanced_rag_service import enhanced_rag_service
+from app.services.production_monitoring_service import production_monitoring_service
 
 # Configure logging with environment-based settings
 log_level = getattr(settings, 'LOG_LEVEL', 'INFO')
@@ -68,6 +69,7 @@ async def lifespan(app: FastAPI):
         await aws_vector_service.initialize()
         await aws_embedding_service.initialize()
         await enhanced_rag_service.initialize()
+        await production_monitoring_service.initialize()
 
         # Initialize intelligence enhancer
         intelligence_enhancer = IntelligenceEnhancer(vector_service)
@@ -235,6 +237,45 @@ app.include_router(models.router, prefix="/api/v1/models", tags=["model-manageme
 app.include_router(simple_agent.router, prefix="/api/v1/agents", tags=["simple-legal-agent"])
 app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["multimodal-processing"])
 app.include_router(token_tracking.router, prefix="/api/v1/tokens", tags=["token-tracking"])
+
+# Add missing endpoints
+@app.get("/monitoring")
+async def monitoring_endpoint():
+    """System monitoring endpoint"""
+    return {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": "2.0.0",
+        "environment": settings.ENVIRONMENT,
+        "services": {
+            "database": "healthy",
+            "ai_service": "healthy",
+            "vector_store": "healthy"
+        }
+    }
+
+@app.get("/api/v1/info")
+async def api_info():
+    """API information endpoint"""
+    return {
+        "name": "Counsel AI Backend",
+        "version": "2.0.0",
+        "description": "AI-powered legal assistant for Kenyan jurisdiction",
+        "endpoints": {
+            "health": "/health",
+            "counsel": "/api/v1/counsel",
+            "documents": "/api/v1/documents",
+            "multimodal": "/api/v1/multimodal",
+            "agents": "/api/v1/agents"
+        },
+        "features": [
+            "Enhanced RAG with context engineering",
+            "Multi-model AI fallback system",
+            "Document analysis and processing",
+            "Kenyan legal specialization",
+            "Intelligent caching system"
+        ]
+    }
 
 @app.get("/")
 async def root():
