@@ -1,7 +1,7 @@
 # 🏛️ LegalizeMe Counsel AI - Enterprise Legal Intelligence Platform
 
 [![Production Ready](https://img.shields.io/badge/Production-Ready-green.svg)](https://www.legalizeme.site/counsel)
-[![API Status](https://img.shields.io/badge/API-21%2F21%20Operational-brightgreen.svg)](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs)
+[![API Status](https://img.shields.io/badge/API-21%2F21%20Operational-brightgreen.svg)](#api-documentation)
 [![AWS ECS](https://img.shields.io/badge/AWS-ECS%20Fargate-orange.svg)](https://aws.amazon.com/ecs/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL%2015.8-blue.svg)](https://postgresql.org/)
 [![CI/CD](https://img.shields.io/badge/CI%2FCD-Automated-green.svg)](https://github.com/features/actions)
@@ -10,8 +10,8 @@
 **Enterprise-grade AI-powered legal intelligence platform specifically designed for Kenyan jurisdiction, delivering accurate legal guidance through AWS Bedrock's most advanced language models with automated CI/CD pipeline and zero-downtime deployments.**
 
 > 🎯 **Production URL**: [https://www.legalizeme.site/counsel](https://www.legalizeme.site/counsel)
-> 📚 **API Documentation**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/docs)
-> 🏥 **System Health**: [http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health](http://counsel-alb-694525771.us-east-1.elb.amazonaws.com/health)
+> 📚 **API Documentation**: Available at `/docs` endpoint
+> 🏥 **System Health**: Available at `/health` endpoint
 
 ## 🎯 Overview
 
@@ -96,24 +96,20 @@ pip install -r requirements.txt
 ```
 
 ### 2. Environment Configuration
-Create a `.env` file with your configuration:
-```env
-# AWS Configuration (Required)
-AWS_ACCESS_KEY_ID=your_aws_access_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret_key
-AWS_REGION=us-east-1
-
-# Database (Required for production)
-DATABASE_URL=postgresql://user:pass@localhost:5432/counsel_db
-
-# Security (Required)
-SECRET_KEY=your-secure-secret-key
-
-# AI Models (Pre-configured)
-AWS_BEDROCK_MODEL_ID_PRIMARY=us.anthropic.claude-sonnet-4-20250514-v1:0
-AWS_BEDROCK_MODEL_ID_SECONDARY=us.anthropic.claude-3-7-sonnet-20250219-v1:0
-AWS_BEDROCK_MODEL_ID_FALLBACK=mistral.mistral-large-2402-v1:0
+Copy the example environment file and configure your settings:
+```bash
+cp .env.example .env
 ```
+
+Edit `.env` with your configuration. See `.env.example` for all available options.
+
+**Required Environment Variables:**
+- `AWS_ACCESS_KEY_ID` - Your AWS access key
+- `AWS_SECRET_ACCESS_KEY` - Your AWS secret key  
+- `DATABASE_URL` - PostgreSQL connection string
+- `SECRET_KEY` - Secure random key for JWT tokens
+
+**Security Note:** Never commit `.env` files or hardcode credentials in your code.
 
 ### 3. Database Setup
 ```bash

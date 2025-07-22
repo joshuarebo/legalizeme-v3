@@ -1,20 +1,47 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from datetime import datetime
 from typing import Dict, Any
 import logging
 import asyncio
+import time
+from collections import defaultdict, deque
 from sqlalchemy import text
 
 from app.services.mcp_service import MCPService
 from app.services.vector_service import VectorService
-from app.services.document_service import DocumentService
+# DocumentService removed - using CounselDocs instead
 from app.services.crawler_service import CrawlerService
 from app.database import get_db
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+# Simple rate limiter for health endpoint
+class HealthRateLimiter:
+    def __init__(self):
+        self.requests = defaultdict(lambda: deque())
+
+    def is_allowed(self, request: Request) -> bool:
+        """Check if health check request is allowed (60 per minute)"""
+        client_key = request.client.host if request.client else "unknown"
+        now = time.time()
+        requests = self.requests[client_key]
+
+        # Remove old requests (60 second window)
+        while requests and requests[0] < now - 60:
+            requests.popleft()
+
+        # Allow up to 60 requests per minute
+        if len(requests) < 60:
+            requests.append(now)
+            return True
+
+        return False
+
+health_rate_limiter = HealthRateLimiter()
 
 class HealthResponse(BaseModel):
     status: str
@@ -31,9 +58,21 @@ class ServiceStatus(BaseModel):
 mcp_service = MCPService()
 
 @router.get("/", response_model=HealthResponse)
-async def health_check():
+async def health_check(request: Request):
     """Comprehensive health check"""
     try:
+        # Check rate limit
+        if not health_rate_limiter.is_allowed(request):
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": "Rate limit exceeded",
+                    "message": "Too many health check requests. Please try again later.",
+                    "retry_after": 60
+                },
+                headers={"Retry-After": "60"}
+            )
+
         # Perform health check using MCP service
         health_result = await mcp_service.health_check()
         

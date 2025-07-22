@@ -28,6 +28,12 @@ class LegalQueryRequest(BaseModel):
     query_type: str = Field(default="legal_query")
     use_enhanced_rag: bool = Field(default=True)
     agent_mode: bool = Field(default=False)
+
+    # NEW: Document context fields for frontend requirements
+    document_context: Optional[str] = Field(default=None, description="Reference uploaded document ID")
+    analysis_id: Optional[str] = Field(default=None, description="Reference specific analysis ID")
+    kenyan_law_focus: bool = Field(default=True, description="Focus on Kenyan law")
+    response_format: str = Field(default="detailed", description="basic, detailed, legal_brief")
     user_context: Optional[Dict[str, Any]] = Field(default=None)
     conversation_id: Optional[str] = Field(default=None)
     message_history: Optional[List[Dict[str, str]]] = Field(default=None)
@@ -48,6 +54,11 @@ class LegalQueryResponse(BaseModel):
     reasoning_chain: Optional[List[str]] = Field(default=None)
     follow_up_suggestions: Optional[List[str]] = Field(default=None)
     related_queries: Optional[List[str]] = Field(default=None)
+
+    # NEW: Document context fields for frontend requirements
+    document_context: Optional[Dict[str, Any]] = Field(default=None, description="Document context information")
+    citations: Optional[List[Dict[str, Any]]] = Field(default=None, description="Enhanced citations with confidence")
+    cached: bool = Field(default=False, description="Whether response was cached")
 
 class DirectQueryRequest(BaseModel):
     query: str = Field(..., max_length=2000)

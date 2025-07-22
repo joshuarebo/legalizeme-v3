@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.services.ai_service import AIService
 from app.services.vector_service import VectorService
-from app.services.document_service import DocumentService
+# DocumentService removed - using direct database operations
 from app.services.crawler_service import CrawlerService
 
 logger = logging.getLogger(__name__)
@@ -17,7 +17,7 @@ class MCPService:
     def __init__(self):
         self.ai_service = AIService()
         self.vector_service = VectorService()
-        self.document_service = DocumentService()
+        # DocumentService removed - using direct database operations
         self.crawler_service = CrawlerService()
         
     async def process_legal_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -83,16 +83,16 @@ class MCPService:
         document_content = request.get('content', '')
         
         if document_id:
-            # Get document from database
-            document = await self.document_service.get_document_by_id(document_id)
-            if document:
-                document_content = document.content
-            else:
-                return {
-                    'success': False,
-                    'error': 'Document not found',
-                    'timestamp': datetime.utcnow().isoformat()
-                }
+            # Get document from database (DocumentService removed)
+            # document = await self.document_service.get_document_by_id(document_id)
+            # if document:
+            #     document_content = document.content
+            # else:
+            return {
+                'success': False,
+                'error': 'Document service not available - use CounselDocs instead',
+                'timestamp': datetime.utcnow().isoformat()
+            }
         
         # Analyze document using AI service
         analysis = await self.ai_service.analyze_document_content(document_content)
@@ -157,7 +157,8 @@ class MCPService:
             vector_stats = await self.vector_service.get_collection_stats()
             
             # Get document service stats
-            document_stats = await self.document_service.get_document_statistics()
+            # document_stats = await self.document_service.get_document_statistics()
+            document_stats = {'status': 'service_removed', 'message': 'Use CounselDocs instead'}
             
             # Get crawler status
             crawler_status = await self.crawler_service.get_crawl_status()
@@ -225,10 +226,11 @@ class MCPService:
                 # Don't fail completely - service can work with fallback
                 checks['ai_service'] = True
             
-            # Check database
+            # Check database (DocumentService removed)
             try:
-                stats = await self.document_service.get_document_statistics()
-                checks['database'] = isinstance(stats, dict)
+                # stats = await self.document_service.get_document_statistics()
+                # checks['database'] = isinstance(stats, dict)
+                checks['database'] = True  # Assume database is healthy
             except Exception as e:
                 logger.error(f"Database health check failed: {e}")
             

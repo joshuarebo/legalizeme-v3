@@ -212,6 +212,95 @@ class DocumentAnalysisResponse(BaseModel):
     quality_score: float
 
 # ============================================================================
+# ENHANCED DOCUMENT ANALYSIS MODELS (Phase 1 Enhancement)
+# ============================================================================
+
+class KeyFinding(BaseModel):
+    """Detailed finding from document analysis"""
+    category: str  # "Contract Terms", "Legal Obligations", "Risk Factors", "Compliance Issues"
+    finding: str
+    severity: str  # "low", "medium", "high", "critical"
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    page_reference: Optional[int] = None
+    section_reference: Optional[str] = None
+    legal_basis: Optional[str] = None
+    recommendation: Optional[str] = None
+
+class LegalRisk(BaseModel):
+    """Legal risk assessment with mitigation strategies"""
+    risk_type: str  # "compliance", "financial", "operational", "reputational"
+    title: str
+    description: str
+    severity: str  # "low", "medium", "high", "critical"
+    probability: float = Field(..., ge=0.0, le=1.0)
+    impact: str
+    mitigation: str
+    legal_basis: str
+    kenyan_law_reference: str
+    estimated_cost: Optional[str] = None
+    timeline: Optional[str] = None
+
+class ComplianceAnalysis(BaseModel):
+    """Comprehensive compliance analysis against Kenyan law"""
+    overall_score: float = Field(..., ge=0.0, le=1.0)
+    kenyan_law_compliance: bool
+    compliance_details: Dict[str, str]  # {"employment_act_2007": "compliant", "labor_relations_act": "requires_review"}
+    missing_requirements: List[str]
+    recommendations: List[str]
+    critical_gaps: List[str] = []  # Make this optional with default empty list
+    compliance_timeline: Optional[str] = None
+
+class KenyanLawCitation(BaseModel):
+    """Kenyan law citation with detailed reference information"""
+    source: str  # "Employment Act 2007", "Constitution of Kenya 2010"
+    section: str
+    title: str
+    relevance: str
+    url: str
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    page_number: Optional[int] = None
+    excerpt: str
+    legal_area: str  # "employment", "constitutional", "commercial"
+    citation_type: str  # "statute", "case_law", "regulation"
+
+class DocumentIntelligence(BaseModel):
+    """AI-extracted document intelligence"""
+    document_type_detected: str
+    language: str
+    jurisdiction: str
+    parties_identified: List[str]
+    key_dates: List[str]
+    financial_terms: List[str]
+    critical_clauses: List[str]
+    contract_duration: Optional[str] = None
+    governing_law: Optional[str] = None
+    dispute_resolution: Optional[str] = None
+
+class EnhancedDocumentAnalysisResponse(BaseModel):
+    """Enhanced document analysis response with comprehensive legal intelligence"""
+    # Core response fields
+    analysis_id: str
+    document_id: str
+    status: str = "completed"
+    confidence: float = Field(..., ge=0.0, le=1.0)
+    processing_time: float
+    model_used: str
+
+    # Enhanced analysis content
+    analysis_summary: str  # 2-3 paragraph comprehensive summary
+    key_findings: List[KeyFinding]
+    legal_risks: List[LegalRisk]
+    compliance_analysis: ComplianceAnalysis
+    citations: List[KenyanLawCitation]
+    document_intelligence: DocumentIntelligence
+
+    # Metadata
+    created_at: datetime
+    analysis_type: str
+    focus_areas: List[str]
+    kenyan_law_focus: bool = True
+
+# ============================================================================
 # MODEL & AI SERVICE RESPONSES
 # ============================================================================
 

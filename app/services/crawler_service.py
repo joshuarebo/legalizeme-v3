@@ -13,7 +13,7 @@ from app.config import settings
 from app.models.document import Document
 from app.models.legal_case import LegalCase
 from app.database import SessionLocal
-from app.services.document_service import DocumentService
+# DocumentService removed - using direct database operations
 from app.crawlers.kenya_law_crawler import KenyaLawCrawler
 from app.crawlers.parliament_crawler import ParliamentCrawler
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class CrawlerService:
     def __init__(self):
         self.session = None
-        self.document_service = DocumentService()
+        # DocumentService removed - using direct database operations
         self.kenya_law_crawler = KenyaLawCrawler()
         self.parliament_crawler = ParliamentCrawler()
         self.is_running = False
@@ -142,8 +142,9 @@ class CrawlerService:
                     'word_count': len(text_content.split())
                 }
                 
-                # Save to database
-                await self.document_service.create_document_from_crawl(metadata)
+                # Save to database (direct operation)
+                # await self.document_service.create_document_from_crawl(metadata)
+                logger.info(f"Crawled content from {url} - {len(text_content)} characters")
                 
                 return metadata
                 

@@ -1,0 +1,66 @@
+{
+  "test_summary": {
+    "total_tests": 12,
+    "passed_tests": 10,
+    "failed_tests": 2,
+    "overall_score": 83.33333333333334,
+    "test_date": "2025-07-20T11:31:38.895730",
+    "system_status": "NEEDS_ATTENTION"
+  },
+  "detailed_results": {
+    "unit_tests": {
+      "error": "'SystemMonitor' object has no attribute '_calculate_uptime'"
+    },
+    "integration_tests": {
+      "health_check": "PASSED",
+      "templates": "PASSED",
+      "document_generation": "PASSED",
+      "document_export": "PASSED"
+    },
+    "load_tests": {
+      "sustained_load": {
+        "total_requests": 50,
+        "successful_requests": 50,
+        "failed_requests": 0,
+        "success_rate": 1.0,
+        "total_time": 61.306838035583496,
+        "avg_response_time": 0.6311813545227051,
+        "requests_per_second": 0.8155697080801848,
+        "status": "PASSED"
+      }
+    },
+    "security_tests": {
+      "sql_injection": "PASSED - Rejected",
+      "xss_protection": "PASSED - Rejected",
+      "rate_limiting": "WARNING - No rate limiting detected"
+    },
+    "compliance_tests": {
+      "employment_act": {
+        "status": "PASSED",
+        "checks_passed": [
+          "Compliance notes included",
+          "Kenyan law compliance flagged",
+          "Employment Act references found"
+        ],
+        "compliance_score": 0
+      },
+      "minimum_wage": "FAILED"
+    },
+    "performance_tests": {
+      "response_time": {
+        "time_seconds": 0.6382896900177002,
+        "status": "PASSED"
+      },
+      "concurrent_requests": {
+        "total_requests": 10,
+        "successful_requests": 10,
+        "total_time": 2.211686134338379,
+        "avg_time_per_request": 0.2211686134338379,
+        "status": "PASSED"
+      }
+    }
+  },
+  "recommendations": [
+    "Implement rate limiting for better security"
+  ]
+}

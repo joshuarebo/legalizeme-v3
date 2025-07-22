@@ -1,0 +1,32 @@
+EMPLOYMENT CONTRACT
+
+This Employment Contract is entered into between TechCorp Kenya Ltd (the "Company") and John Doe (the "Employee") on January 15, 2025.
+
+1. POSITION AND DUTIES
+The Employee shall serve as Software Developer and shall perform duties as assigned by the Company.
+
+2. SALARY
+The Employee shall receive a monthly salary of KES 150,000 payable monthly on the last working day of each month.
+
+3. PROBATION PERIOD
+The Employee shall serve a probation period of 6 months from the start date during which either party may terminate employment with 7 days notice.
+
+4. TERMINATION
+Either party may terminate this contract with 30 days written notice. The Company may terminate immediately for cause including misconduct, breach of contract, or poor performance.
+
+5. CONFIDENTIALITY
+The Employee agrees to maintain confidentiality of all company information, trade secrets, and proprietary data both during and after employment.
+
+6. WORKING HOURS
+Normal working hours are 8:00 AM to 5:00 PM, Monday to Friday, with a one-hour lunch break.
+
+7. BENEFITS
+The Employee is entitled to 21 days annual leave, medical insurance, and statutory benefits as per Employment Act 2007.
+
+8. GOVERNING LAW
+This contract is governed by the laws of Kenya and subject to Employment Act 2007 and other applicable Kenyan employment legislation.
+
+IN WITNESS WHEREOF, the parties have executed this Agreement on the date first written above.
+
+Company: TechCorp Kenya Ltd
+Employee: John Doe

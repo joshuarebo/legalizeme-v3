@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # AWS Bedrock Titan Embedding Model ID
     AWS_BEDROCK_TITAN_EMBEDDING_MODEL_ID: str = os.getenv("AWS_BEDROCK_TITAN_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
 
+    # AWS Bedrock Titan Models for CounselDocs
+    AWS_BEDROCK_TITAN_TEXT_EXPRESS_MODEL_ID: str = os.getenv("AWS_BEDROCK_TITAN_TEXT_EXPRESS_MODEL_ID", "amazon.titan-text-express-v1")
+    AWS_BEDROCK_TITAN_TEXT_PREMIER_MODEL_ID: str = os.getenv("AWS_BEDROCK_TITAN_TEXT_PREMIER_MODEL_ID", "amazon.titan-text-premier-v1:0")
+    AWS_BEDROCK_TITAN_EMBEDDINGS_V2_MODEL_ID: str = os.getenv("AWS_BEDROCK_TITAN_EMBEDDINGS_V2_MODEL_ID", "amazon.titan-embed-text-v2:0")
+    AWS_BEDROCK_TITAN_MULTIMODAL_EMBEDDINGS_MODEL_ID: str = os.getenv("AWS_BEDROCK_TITAN_MULTIMODAL_EMBEDDINGS_MODEL_ID", "amazon.titan-embed-g1-text-02")
+
     # AI Models
     HUGGING_FACE_TOKEN: Optional[str] = os.getenv("HUGGING_FACE_TOKEN")
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")

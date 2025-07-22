@@ -10,7 +10,7 @@ import time
 
 from app.config import settings
 from app.database import engine, Base, get_db
-from app.api.routes import counsel, documents, auth, health, models, multimodal, simple_agent, token_tracking
+from app.api.routes import counsel, auth, health, models, multimodal, simple_agent, token_tracking
 from app.core.middleware import setup_middleware
 from app.core.middleware.security_middleware import SecurityMiddleware
 from app.core.security.rate_limiter import RateLimiter
@@ -178,7 +178,7 @@ app = FastAPI(
     - 🤖 **Simple Legal Agent**: Direct AWS Bedrock integration with multi-model fallback
     - 📚 **Kenyan Legal Expertise**: Employment, Company, Constitutional, Land, and Family Law
     - 🔄 **Multi-Model Support**: Claude Sonnet 4, Claude 3.7, Mistral Large
-    - 📄 **Document Processing**: Upload and analyze legal documents
+    - 📄 **CounselDocs**: Advanced document analysis and generation with Kenya Law compliance
     - 🔍 **Legal Research**: Comprehensive legal research with citations
     - 🛡️ **Bulletproof Design**: Never fails, always provides responses
 
@@ -232,11 +232,19 @@ if not getattr(settings, 'DISABLE_AUTH_ROUTES', False):
     app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 
 app.include_router(counsel.router, prefix="/api/v1/counsel", tags=["counsel"])
-app.include_router(documents.router, prefix="/api/v1/documents", tags=["documents"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["model-management"])
 app.include_router(simple_agent.router, prefix="/api/v1/agents", tags=["simple-legal-agent"])
 app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["multimodal-processing"])
 app.include_router(token_tracking.router, prefix="/api/v1/tokens", tags=["token-tracking"])
+
+# CounselDocs routers
+from app.counseldocs.api.analysis import router as counseldocs_analysis_router
+from app.counseldocs.api.generation import router as counseldocs_generation_router
+from app.counseldocs.api.archive import router as counseldocs_archive_router
+
+app.include_router(counseldocs_analysis_router, tags=["counseldocs-analysis"])
+app.include_router(counseldocs_generation_router, tags=["counseldocs-generation"])
+app.include_router(counseldocs_archive_router, tags=["counseldocs-archive"])
 
 # Add missing endpoints
 @app.get("/monitoring")
@@ -264,7 +272,7 @@ async def api_info():
         "endpoints": {
             "health": "/health",
             "counsel": "/api/v1/counsel",
-            "documents": "/api/v1/documents",
+            "counseldocs": "/api/v1/counseldocs",
             "multimodal": "/api/v1/multimodal",
             "agents": "/api/v1/agents"
         },
