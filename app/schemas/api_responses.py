@@ -76,19 +76,44 @@ class DirectQueryResponse(BaseModel):
     timestamp: datetime
     request_id: str
 
+class SourceMetadata(BaseModel):
+    """Metadata for structured sources (Step 1.4)"""
+    source: str
+    crawled_at: Optional[str] = None
+    last_verified: Optional[str] = None
+    freshness_score: float
+    document_date: Optional[str] = None
+    court_name: Optional[str] = None
+    case_number: Optional[str] = None
+    act_chapter: Optional[str] = None
+    citation_text: Optional[str] = None
+    crawl_status: str = "active"
+
+class StructuredSource(BaseModel):
+    """Interactive source with rich metadata for frontend display"""
+    source_id: str  # Document UUID for /sources/{id} endpoints
+    citation_id: int
+    title: str
+    url: str
+    snippet: str  # 200-char preview for hover tooltips
+    document_type: str  # "legislation", "judgment", "regulation", "constitution"
+    legal_area: Optional[str] = None
+    relevance_score: float = Field(..., ge=0.0, le=1.0)
+    highlighted_excerpt: Optional[str] = None  # Query terms highlighted with <mark>
+    metadata: SourceMetadata  # Structured metadata with freshness, court info, etc.
+
 class EnhancedRAGResponse(BaseModel):
     success: bool
-    response: str
+    answer: str  # Response with inline citations [1], [2], [3]
+    sources: List[StructuredSource]  # Rich source metadata for interactive display
+    citation_map: Dict[int, str]  # {1: "Employment Act 2007, Section 35", 2: "ABC Ltd v XYZ [2024] eKLR"}
     model_used: str
     retrieved_documents: int
     context_tokens: int
     total_tokens: int
     cost_estimate: Dict[str, Any]
-    sources: List[str]
-    similarities: List[float]
     latency_ms: int
-    rag_quality_score: float = Field(..., ge=0.0, le=1.0)
-    context_relevance: float = Field(..., ge=0.0, le=1.0)
+    metadata: Dict[str, Any] = Field(default_factory=dict)  # Contains confidence, freshness_score, etc.
 
 class ConversationMessage(BaseModel):
     message_id: str

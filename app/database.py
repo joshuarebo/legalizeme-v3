@@ -16,9 +16,13 @@ IS_TESTING = os.getenv("TESTING", "false").lower() == "true" or "pytest" in os.g
 # Database setup - use test database for testing
 database_url = settings.TEST_DATABASE_URL if IS_TESTING else settings.DATABASE_URL
 
-# Production-optimized PostgreSQL configuration
-if IS_TESTING and database_url.startswith("sqlite"):
-    # SQLite configuration for testing
+# Detect database type from URL
+IS_SQLITE = database_url.startswith("sqlite")
+IS_POSTGRESQL = "postgresql" in database_url or "postgres" in database_url
+
+# Database-specific configuration
+if IS_SQLITE:
+    # SQLite configuration for development/testing
     engine_kwargs = {
         "poolclass": StaticPool,
         "connect_args": {"check_same_thread": False},
@@ -26,7 +30,8 @@ if IS_TESTING and database_url.startswith("sqlite"):
         "pool_recycle": -1,
         "echo": True if settings.ENVIRONMENT == "development" else False
     }
-else:
+    logger.info("Using SQLite database configuration")
+elif IS_POSTGRESQL:
     # PostgreSQL production configuration - fixes session management issues
     engine_kwargs = {
         "poolclass": QueuePool,
@@ -36,8 +41,15 @@ else:
         "pool_recycle": 3600,  # 1 hour instead of 5 minutes
         "pool_timeout": 30,
         "echo": False,  # Disable echo in production for performance
-        "isolation_level": "READ_COMMITTED"  # Explicit isolation level
+        "isolation_level": "READ_COMMITTED"  # PostgreSQL-specific isolation level
     }
+    logger.info("Using PostgreSQL database configuration")
+else:
+    # Default configuration
+    engine_kwargs = {
+        "echo": True if settings.ENVIRONMENT == "development" else False
+    }
+    logger.warning(f"Unknown database type, using default configuration: {database_url[:20]}...")
 
 engine = create_engine(database_url, **engine_kwargs)
 

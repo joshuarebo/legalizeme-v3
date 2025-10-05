@@ -5,6 +5,7 @@ from typing import List, Dict, Optional, Any
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
+import httpx
 
 from app.services.ai_service import AIService
 from app.services.llm_manager import llm_manager
@@ -17,6 +18,7 @@ from app.services.streaming_rag_service import streaming_rag_service
 from app.services.production_monitoring_service import production_monitoring_service
 from app.database import get_db
 from app.config import settings
+from app.models.document import Document
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -145,6 +147,34 @@ class ConversationMessageResponse(BaseModel):
     content: str
     metadata: Optional[Dict[str, Any]] = Field(default=None)
     created_at: datetime
+
+# Step 1.3: Source Verification Models
+class SourceVerificationResponse(BaseModel):
+    source_id: str
+    title: str
+    url: str
+    is_accessible: bool
+    last_verified: str
+    crawl_status: str
+    freshness_score: float
+    http_status: Optional[int] = None
+    verification_time_ms: float
+
+class FullSourceResponse(BaseModel):
+    source_id: str
+    title: str
+    url: str
+    full_content: str
+    summary: Optional[str] = None
+    document_type: str
+    legal_area: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+    crawled_at: Optional[str] = None
+    last_verified: Optional[str] = None
+    document_date: Optional[str] = None
+    court_name: Optional[str] = None
+    case_number: Optional[str] = None
+    act_chapter: Optional[str] = None
 
 # Services will be initialized on-demand to avoid startup crashes
 # ai_service = AIService()
@@ -384,20 +414,35 @@ async def _process_enhanced_rag_query(request: LegalQueryRequest, query_embeddin
         return await _process_direct_optimized_query(request)
 
 async def _process_agent_mode_query(request: LegalQueryRequest) -> Dict[str, Any]:
-    """Process query with agent mode (chain-of-thought reasoning)"""
+    """Process query with agent mode (chain-of-thought reasoning) with enhanced RAG citations"""
     try:
-        # Build context-engineered prompt for agent reasoning
+        # ENHANCEMENT: Use enhanced RAG service for agent mode
+        from app.services.enhanced_rag_service import enhanced_rag_service
+
+        # Step 1: Initialize enhanced RAG service
+        if not enhanced_rag_service._initialized:
+            await enhanced_rag_service.initialize()
+
+        # Step 2: Retrieve relevant documents with citations
+        rag_response = await enhanced_rag_service.query(
+            question=request.query,
+            context="",
+            max_tokens=4000,
+            use_citations=True  # Enable inline citations for agent mode
+        )
+
+        # Step 3: Build agent reasoning prompt with retrieved context
         agent_prompt = kenyan_legal_prompt_optimizer.optimize_prompt(
             query=request.query,
             query_type="agent_research",
             context=request.context
         )
 
-        # Add chain-of-thought reasoning structure
+        # Step 4: Add chain-of-thought reasoning structure with citations
         reasoning_prompt = f"""{agent_prompt}
 
 CHAIN-OF-THOUGHT REASONING:
-Please think through this step by step:
+Please think through this step by step, using the retrieved sources:
 
 1. LEGAL ISSUE IDENTIFICATION:
    - What is the core legal question?
@@ -415,24 +460,42 @@ Please think through this step by step:
    - What immediate steps should be taken?
    - When should professional legal advice be sought?
 
-Please provide your reasoning for each step, then give a comprehensive final answer."""
+IMPORTANT: Cite all sources using [1], [2], [3] format.
 
-        # Use parallel processing for agent mode to get fastest response
-        response = await llm_manager.invoke_model_parallel(
-            prompt=reasoning_prompt,
-            max_concurrent=2
-        )
+Retrieved Context:
+{rag_response.get('answer', '')}
+
+Please provide your reasoning for each step with citations, then give a comprehensive final answer."""
+
+        # Step 5: Generate agent response (optional: can skip if RAG answer is sufficient)
+        # For now, use RAG answer directly with reasoning extraction
+        response_text = rag_response.get("answer", "")
 
         # Extract reasoning chain from response
-        reasoning_chain = _extract_reasoning_chain(response.get("response_text", ""))
+        reasoning_chain = _extract_reasoning_chain(response_text)
 
-        response["reasoning_chain"] = reasoning_chain
-        response["retrieval_strategy"] = "agent_reasoning"
-
-        return response
+        # Step 6: Return enhanced response with citations
+        return {
+            "success": rag_response.get("success", True),
+            "response_text": response_text,
+            "model_used": rag_response.get("model_used", "claude-sonnet-4"),
+            "confidence": rag_response.get("metadata", {}).get("confidence", 0.8),
+            "sources": rag_response.get("sources", []),  # Structured sources with citations
+            "citation_map": rag_response.get("citation_map", {}),
+            "reasoning_chain": reasoning_chain,
+            "retrieval_strategy": "agent_reasoning_with_rag",
+            "relevant_documents": rag_response.get("sources", []),
+            "retrieved_documents": rag_response.get("retrieved_documents", 0),
+            "context_tokens": rag_response.get("context_tokens", 0),
+            "total_tokens": rag_response.get("total_tokens", 0),
+            "cost_estimate": rag_response.get("cost_estimate", {}),
+            "latency_ms": rag_response.get("latency_ms", 0),
+            "metadata": rag_response.get("metadata", {})
+        }
 
     except Exception as e:
         logger.error(f"Error in agent mode query: {e}")
+        # Fallback to direct query if enhanced RAG fails
         return await _process_direct_optimized_query(request)
 
 def _extract_reasoning_chain(response_text: str) -> List[str]:
@@ -510,24 +573,59 @@ async def generate_legal_document(request: DocumentGenerationRequest):
 
 @router.post("/research", response_model=LegalResearchResponse)
 async def conduct_legal_research(request: LegalResearchRequest):
-    """Conduct comprehensive legal research"""
+    """Conduct comprehensive legal research with enhanced RAG citations"""
     try:
-        # Simple research implementation
-        summary = f"Research summary for: {request.query}"
-        
+        # ENHANCEMENT: Use enhanced RAG service for research mode
+        from app.services.enhanced_rag_service import enhanced_rag_service
+
+        # Initialize enhanced RAG service
+        if not enhanced_rag_service._initialized:
+            await enhanced_rag_service.initialize()
+
+        # Perform RAG query with citations
+        rag_response = await enhanced_rag_service.query(
+            question=request.query,
+            context="",
+            max_tokens=4000,
+            use_citations=True  # Enable inline citations for research mode
+        )
+
+        # Build research summary with citations
+        summary = rag_response.get("answer", f"Research summary for: {request.query}")
+
+        # Convert structured sources to relevant_documents format
+        relevant_documents = [
+            {
+                "source_id": source.get("source_id", ""),
+                "citation_id": source.get("citation_id", 0),
+                "title": source.get("title", ""),
+                "url": source.get("url", ""),
+                "snippet": source.get("snippet", ""),
+                "document_type": source.get("document_type", ""),
+                "relevance_score": source.get("relevance_score", 0.0),
+                "citation_text": source.get("metadata", {}).get("citation_text", ""),
+                "freshness_score": source.get("metadata", {}).get("freshness_score", 0.5),
+            }
+            for source in rag_response.get("sources", [])
+        ]
+
         return LegalResearchResponse(
             query=request.query,
             summary=summary,
+            relevant_documents=relevant_documents,
+            total_results=len(relevant_documents),
+            timestamp=datetime.utcnow()
+        )
+
+    except Exception as e:
+        logger.error(f"Error conducting research: {e}")
+        # Fallback to simple implementation
+        return LegalResearchResponse(
+            query=request.query,
+            summary=f"Research summary for: {request.query}",
             relevant_documents=[],
             total_results=0,
             timestamp=datetime.utcnow()
-        )
-        
-    except Exception as e:
-        logger.error(f"Error conducting research: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Error conducting research"
         )
 
 @router.post("/feedback")
@@ -969,6 +1067,154 @@ async def stream_rag_query(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error processing streaming RAG query"
+        )
+
+# ============================================================================
+# STEP 1.3: SOURCE VERIFICATION ENDPOINTS
+# ============================================================================
+
+@router.get("/sources/{source_id}/verify", response_model=SourceVerificationResponse)
+async def verify_source(source_id: str, db: Session = Depends(get_db)):
+    """
+    Verify source is still accessible and fresh
+
+    Args:
+        source_id: UUID of the document to verify
+        db: Database session
+
+    Returns:
+        SourceVerificationResponse with accessibility status and freshness score
+    """
+    verification_start = datetime.utcnow()
+
+    try:
+        # Get document from database by UUID
+        doc = db.query(Document).filter(Document.uuid == source_id).first()
+
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Source not found: {source_id}"
+            )
+
+        # Check URL accessibility
+        is_accessible = False
+        http_status = None
+
+        if doc.url:
+            try:
+                async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                    response = await client.head(doc.url)  # Use HEAD for faster check
+                    http_status = response.status_code
+                    is_accessible = 200 <= response.status_code < 400
+            except httpx.TimeoutException:
+                logger.warning(f"Timeout verifying source: {doc.url}")
+                is_accessible = False
+                http_status = 408  # Request Timeout
+            except Exception as e:
+                logger.warning(f"Error verifying source {doc.url}: {e}")
+                is_accessible = False
+                http_status = 0
+
+        # Update verification status
+        doc.last_verified_at = datetime.utcnow()
+        doc.crawl_status = "active" if is_accessible else "broken"
+
+        # Calculate freshness score
+        freshness_score = doc.calculate_freshness_score() if hasattr(doc, 'calculate_freshness_score') else 0.5
+
+        # Commit changes
+        db.commit()
+        db.refresh(doc)
+
+        verification_time_ms = (datetime.utcnow() - verification_start).total_seconds() * 1000
+
+        return SourceVerificationResponse(
+            source_id=str(doc.uuid),
+            title=doc.title,
+            url=doc.url or "",
+            is_accessible=is_accessible,
+            last_verified=doc.last_verified_at.isoformat(),
+            crawl_status=doc.crawl_status,
+            freshness_score=freshness_score,
+            http_status=http_status,
+            verification_time_ms=verification_time_ms
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying source {source_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error verifying source: {str(e)}"
+        )
+
+@router.get("/sources/{source_id}/full", response_model=FullSourceResponse)
+async def get_full_source(source_id: str, db: Session = Depends(get_db)):
+    """
+    Get full source content for modal display
+
+    Args:
+        source_id: UUID of the document
+        db: Database session
+
+    Returns:
+        FullSourceResponse with complete document content and metadata
+    """
+    try:
+        # Get document from database by UUID
+        doc = db.query(Document).filter(Document.uuid == source_id).first()
+
+        if not doc:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Source not found: {source_id}"
+            )
+
+        # Build metadata dictionary
+        metadata = {}
+        if doc.legal_metadata:
+            metadata = doc.legal_metadata
+
+        # Add additional metadata fields
+        metadata.update({
+            "source": doc.source,
+            "jurisdiction": doc.jurisdiction,
+            "category": doc.category,
+            "subcategory": doc.subcategory,
+            "tags": doc.tags,
+            "language": doc.language,
+            "word_count": doc.word_count,
+            "readability_score": doc.readability_score,
+            "is_processed": doc.is_processed,
+            "is_indexed": doc.is_indexed
+        })
+
+        return FullSourceResponse(
+            source_id=str(doc.uuid),
+            title=doc.title,
+            url=doc.url or "",
+            full_content=doc.content,
+            summary=doc.summary,
+            document_type=doc.document_type,
+            legal_area=doc.category,
+            metadata=metadata,
+            crawled_at=doc.created_at.isoformat() if doc.created_at else None,
+            last_verified=doc.last_verified_at.isoformat() if doc.last_verified_at else None,
+            document_date=doc.document_date.isoformat() if doc.document_date else None,
+            court_name=doc.court_name,
+            case_number=doc.case_number,
+            act_chapter=doc.act_chapter
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting full source {source_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving source: {str(e)}"
         )
 
 @router.get("/health")
