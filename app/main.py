@@ -237,14 +237,14 @@ app.include_router(simple_agent.router, prefix="/api/v1/agents", tags=["simple-l
 app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["multimodal-processing"])
 # app.include_router(token_tracking.router, prefix="/api/v1/tokens", tags=["token-tracking"])  # Commented out - RDS schema mismatch
 
-# CounselDocs routers
-from app.counseldocs.api.analysis import router as counseldocs_analysis_router
-from app.counseldocs.api.generation import router as counseldocs_generation_router
-from app.counseldocs.api.archive import router as counseldocs_archive_router
+# CounselDocs routers - Commented out due to missing models folder
+# from app.counseldocs.api.analysis import router as counseldocs_analysis_router
+# from app.counseldocs.api.generation import router as counseldocs_generation_router
+# from app.counseldocs.api.archive import router as counseldocs_archive_router
 
-app.include_router(counseldocs_analysis_router, tags=["counseldocs-analysis"])
-app.include_router(counseldocs_generation_router, tags=["counseldocs-generation"])
-app.include_router(counseldocs_archive_router, tags=["counseldocs-archive"])
+# app.include_router(counseldocs_analysis_router, tags=["counseldocs-analysis"])
+# app.include_router(counseldocs_generation_router, tags=["counseldocs-generation"])
+# app.include_router(counseldocs_archive_router, tags=["counseldocs-archive"])
 
 # Add missing endpoints
 @app.get("/monitoring")
