@@ -45,20 +45,12 @@ class AWSVectorService:
             # Initialize OpenSearch connection
             if self._use_opensearch:
                 try:
-                    # Get AWS credentials for OpenSearch authentication
-                    session = boto3.Session(
-                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                        region_name=settings.AWS_REGION
-                    )
-                    credentials = session.get_credentials()
-
+                    # Use direct AWS credentials for OpenSearch authentication (ECS compatible)
                     awsauth = AWS4Auth(
-                        credentials.access_key,
-                        credentials.secret_key,
+                        settings.AWS_ACCESS_KEY_ID,
+                        settings.AWS_SECRET_ACCESS_KEY,
                         settings.AWS_REGION,
-                        'es',
-                        session_token=credentials.token
+                        'es'
                     )
 
                     # Create OpenSearch client
