@@ -10,7 +10,7 @@ import time
 
 from app.config import settings
 from app.database import engine, Base, get_db
-from app.api.routes import counsel, auth, health, models, multimodal, simple_agent, token_tracking
+from app.api.routes import counsel, auth, health, models, multimodal, simple_agent  # token_tracking commented out - schema mismatch
 from app.core.middleware import setup_middleware
 from app.core.middleware.security_middleware import SecurityMiddleware
 from app.core.security.rate_limiter import RateLimiter
@@ -133,17 +133,17 @@ async def _ensure_conversation_tables_exist():
     """Ensure conversation tables exist in the database"""
     try:
         from app.models.conversation import Conversation, ConversationMessage
-        from app.models.token_tracking import UserTokens, TokenUsageHistory
+        # from app.models.token_tracking import UserTokens, TokenUsageHistory  # Commented out - RDS schema mismatch
 
         # Create conversation tables if they don't exist
         Conversation.__table__.create(engine, checkfirst=True)
         ConversationMessage.__table__.create(engine, checkfirst=True)
 
         # Create token tracking tables if they don't exist
-        UserTokens.__table__.create(engine, checkfirst=True)
-        TokenUsageHistory.__table__.create(engine, checkfirst=True)
+        # UserTokens.__table__.create(engine, checkfirst=True)  # Commented out - RDS schema mismatch
+        # TokenUsageHistory.__table__.create(engine, checkfirst=True)  # Commented out - RDS schema mismatch
 
-        logger.info("✅ Conversation and token tracking tables initialized successfully")
+        logger.info("✅ Conversation tables initialized successfully")
 
     except Exception as e:
         logger.warning(f"⚠️ Conversation table initialization failed: {e}")
@@ -235,7 +235,7 @@ app.include_router(counsel.router, prefix="/api/v1/counsel", tags=["counsel"])
 app.include_router(models.router, prefix="/api/v1/models", tags=["model-management"])
 app.include_router(simple_agent.router, prefix="/api/v1/agents", tags=["simple-legal-agent"])
 app.include_router(multimodal.router, prefix="/api/v1/multimodal", tags=["multimodal-processing"])
-app.include_router(token_tracking.router, prefix="/api/v1/tokens", tags=["token-tracking"])
+# app.include_router(token_tracking.router, prefix="/api/v1/tokens", tags=["token-tracking"])  # Commented out - RDS schema mismatch
 
 # CounselDocs routers
 from app.counseldocs.api.analysis import router as counseldocs_analysis_router
