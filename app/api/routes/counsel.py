@@ -383,31 +383,35 @@ async def _process_direct_optimized_query(request: LegalQueryRequest) -> Dict[st
         return {"success": False, "response_text": "Error processing query", "error": str(e)}
 
 async def _process_enhanced_rag_query(request: LegalQueryRequest, query_embedding: Optional[List[float]]) -> Dict[str, Any]:
-    """Process query with enhanced AWS-native RAG"""
+    """Process query with Phase 1 Enhanced RAG (citations + structured sources)"""
     try:
-        # Use AWS-native RAG service (will implement next)
-        from app.services.aws_rag_service import aws_rag_service
+        # Use Phase 1 Enhanced RAG service with citations
+        from app.services.enhanced_rag_service import enhanced_rag_service
 
-        rag_response = await aws_rag_service.query_with_context(
+        rag_response = await enhanced_rag_service.query_with_enhanced_rag(
             query=request.query,
-            context=request.context or {},
-            max_sources=5,
-            query_embedding=query_embedding
+            legal_area=request.context.get("legal_area") if request.context else None,
+            max_sources=5
         )
 
         return {
-            "success": True,
+            "success": rag_response.get("success", True),
             "response_text": rag_response.get("answer", ""),
-            "confidence": rag_response.get("confidence", 0.8),
+            "confidence": rag_response.get("metadata", {}).get("confidence", 0.8),
             "model_used": rag_response.get("model_used", "claude-sonnet-4"),
-            "relevant_documents": rag_response.get("documents", []),
+            "relevant_documents": rag_response.get("sources", []),
             "sources": rag_response.get("sources", []),
-            "retrieval_strategy": "aws_native_rag"
+            "citation_map": rag_response.get("citation_map", {}),
+            "retrieved_documents": rag_response.get("retrieved_documents", 0),
+            "context_tokens": rag_response.get("context_tokens", 0),
+            "total_tokens": rag_response.get("total_tokens", 0),
+            "cost_estimate": rag_response.get("cost_estimate", {}),
+            "retrieval_strategy": "enhanced_rag_with_citations"
         }
 
     except ImportError:
         # Fallback to direct query if RAG service not available
-        logger.warning("AWS RAG service not available, falling back to direct query")
+        logger.warning("Enhanced RAG service not available, falling back to direct query")
         return await _process_direct_optimized_query(request)
     except Exception as e:
         logger.error(f"Error in enhanced RAG query: {e}")
