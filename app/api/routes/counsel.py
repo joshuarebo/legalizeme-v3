@@ -388,6 +388,11 @@ async def _process_enhanced_rag_query(request: LegalQueryRequest, query_embeddin
         # Use Phase 1 Enhanced RAG service with citations
         from app.services.enhanced_rag_service import enhanced_rag_service
 
+        # Check if service is available
+        if enhanced_rag_service is None:
+            logger.warning("Enhanced RAG service not available (None), falling back to direct query")
+            return await _process_direct_optimized_query(request)
+
         # Prepare context string from request.context dict
         context_str = ""
         if request.context:
@@ -432,6 +437,11 @@ async def _process_agent_mode_query(request: LegalQueryRequest) -> Dict[str, Any
     try:
         # ENHANCEMENT: Use enhanced RAG service for agent mode
         from app.services.enhanced_rag_service import enhanced_rag_service
+
+        # Check if service is available
+        if enhanced_rag_service is None:
+            logger.warning("Enhanced RAG service not available for agent mode, falling back to direct query")
+            return await _process_direct_optimized_query(request)
 
         # Step 1: Initialize enhanced RAG service
         if not enhanced_rag_service._initialized:
@@ -591,6 +601,17 @@ async def conduct_legal_research(request: LegalResearchRequest):
     try:
         # ENHANCEMENT: Use enhanced RAG service for research mode
         from app.services.enhanced_rag_service import enhanced_rag_service
+
+        # Check if service is available
+        if enhanced_rag_service is None:
+            logger.warning("Enhanced RAG service not available for research mode")
+            return LegalResearchResponse(
+                query=request.query,
+                summary=f"Research summary for: {request.query} (Enhanced RAG currently unavailable)",
+                relevant_documents=[],
+                total_results=0,
+                timestamp=datetime.utcnow()
+            )
 
         # Initialize enhanced RAG service
         if not enhanced_rag_service._initialized:

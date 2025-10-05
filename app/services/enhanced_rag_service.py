@@ -11,23 +11,37 @@ from datetime import datetime, timedelta
 import json
 import re
 
-from app.services.aws_vector_service import aws_vector_service
-from app.services.aws_embedding_service import aws_embedding_service
-from app.services.token_service import token_service
-from app.services.llm_manager import llm_manager
-from app.config import settings
+try:
+    from app.services.aws_vector_service import aws_vector_service
+    from app.services.aws_embedding_service import aws_embedding_service
+    from app.services.token_service import token_service
+    from app.services.llm_manager import llm_manager
+    from app.config import settings
+    DEPENDENCIES_AVAILABLE = True
+except Exception as e:
+    DEPENDENCIES_AVAILABLE = False
+    aws_vector_service = None
+    aws_embedding_service = None
+    token_service = None
+    llm_manager = None
+    settings = None
+    import warnings
+    warnings.warn(f"Enhanced RAG service dependencies not available: {e}")
 
 logger = logging.getLogger(__name__)
 
 class EnhancedRAGService:
     """Enhanced RAG service using AWS-native components"""
-    
+
     def __init__(self):
+        if not DEPENDENCIES_AVAILABLE:
+            logger.warning("Enhanced RAG Service: Dependencies not available, service will be limited")
         self.vector_service = aws_vector_service
         self.embedding_service = aws_embedding_service
         self.token_service = token_service
         self.llm_manager = llm_manager
         self._initialized = False
+        self._dependencies_available = DEPENDENCIES_AVAILABLE
         
         # RAG configuration
         self.max_context_tokens = 6000
@@ -89,6 +103,23 @@ class EnhancedRAGService:
         Returns:
             Dict with answer, structured sources, citation_map, and metadata
         """
+        # Check if dependencies are available
+        if not self._dependencies_available:
+            logger.error("Enhanced RAG Service dependencies not available")
+            return {
+                'success': False,
+                'answer': "Enhanced RAG service is currently unavailable.",
+                'sources': [],
+                'citation_map': {},
+                'model_used': 'none',
+                'retrieved_documents': 0,
+                'context_tokens': 0,
+                'total_tokens': 0,
+                'cost_estimate': {'total': 0},
+                'latency_ms': 0,
+                'metadata': {'confidence': 0.0, 'error': 'dependencies_unavailable'}
+            }
+
         if not self._initialized:
             await self.initialize()
 
@@ -564,5 +595,10 @@ RESPONSE (with inline citations [1], [2], etc.):"""
         freshness_scores = [s.get('metadata', {}).get('freshness_score', 0.5) for s in sources]
         return round(sum(freshness_scores) / len(freshness_scores), 3)
 
-# Global instance
-enhanced_rag_service = EnhancedRAGService()
+# Global instance - wrap in try-except to prevent startup failures
+try:
+    enhanced_rag_service = EnhancedRAGService()
+except Exception as e:
+    logger.error(f"Failed to create enhanced_rag_service instance: {e}")
+    # Create a dummy instance that will return errors
+    enhanced_rag_service = None
