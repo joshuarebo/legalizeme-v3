@@ -388,10 +388,20 @@ async def _process_enhanced_rag_query(request: LegalQueryRequest, query_embeddin
         # Use Phase 1 Enhanced RAG service with citations
         from app.services.enhanced_rag_service import enhanced_rag_service
 
-        rag_response = await enhanced_rag_service.query_with_enhanced_rag(
-            query=request.query,
-            legal_area=request.context.get("legal_area") if request.context else None,
-            max_sources=5
+        # Prepare context string from request.context dict
+        context_str = ""
+        if request.context:
+            if isinstance(request.context, dict):
+                context_str = " ".join([f"{k}: {v}" for k, v in request.context.items()])
+            else:
+                context_str = str(request.context)
+
+        # Call the query method with correct parameters
+        rag_response = await enhanced_rag_service.query(
+            question=request.query,
+            context=context_str,
+            max_tokens=4000,
+            use_citations=True  # Enable Phase 1 inline citations
         )
 
         return {
@@ -409,12 +419,12 @@ async def _process_enhanced_rag_query(request: LegalQueryRequest, query_embeddin
             "retrieval_strategy": "enhanced_rag_with_citations"
         }
 
-    except ImportError:
+    except ImportError as e:
         # Fallback to direct query if RAG service not available
-        logger.warning("Enhanced RAG service not available, falling back to direct query")
+        logger.warning(f"Enhanced RAG service import failed: {e}, falling back to direct query")
         return await _process_direct_optimized_query(request)
     except Exception as e:
-        logger.error(f"Error in enhanced RAG query: {e}")
+        logger.error(f"Error in enhanced RAG query: {e}", exc_info=True)
         return await _process_direct_optimized_query(request)
 
 async def _process_agent_mode_query(request: LegalQueryRequest) -> Dict[str, Any]:
