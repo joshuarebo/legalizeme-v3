@@ -11,6 +11,8 @@ from datetime import datetime
 import boto3
 from botocore.exceptions import ClientError
 import numpy as np
+from opensearchpy import OpenSearch, RequestsHttpConnection
+from requests_aws4auth import AWS4Auth
 
 from app.config import settings
 
@@ -22,14 +24,15 @@ class AWSVectorService:
     def __init__(self):
         self.opensearch_client = None
         self.bedrock_client = None
-        self.index_name = "legal-documents"
+        self.index_name = settings.OPENSEARCH_INDEX
         self._initialized = False
+        self._use_opensearch = True  # Flag to enable/disable OpenSearch
         
     async def initialize(self):
         """Initialize AWS services"""
         if self._initialized:
             return
-            
+
         try:
             # Initialize AWS clients
             self.bedrock_client = boto3.client(
@@ -38,15 +41,57 @@ class AWSVectorService:
                 aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
                 aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
             )
-            
-            # For now, we'll use a simple in-memory vector store
-            # In production, this would be AWS OpenSearch
-            self.vector_store = {}
-            self.document_store = {}
-            
+
+            # Initialize OpenSearch connection
+            if self._use_opensearch:
+                try:
+                    # Get AWS credentials for OpenSearch authentication
+                    session = boto3.Session(
+                        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                        region_name=settings.AWS_REGION
+                    )
+                    credentials = session.get_credentials()
+
+                    awsauth = AWS4Auth(
+                        credentials.access_key,
+                        credentials.secret_key,
+                        settings.AWS_REGION,
+                        'es',
+                        session_token=credentials.token
+                    )
+
+                    # Create OpenSearch client
+                    self.opensearch_client = OpenSearch(
+                        hosts=[{
+                            'host': settings.OPENSEARCH_ENDPOINT,
+                            'port': settings.OPENSEARCH_PORT
+                        }],
+                        http_auth=awsauth,
+                        use_ssl=True,
+                        verify_certs=True,
+                        connection_class=RequestsHttpConnection,
+                        timeout=30
+                    )
+
+                    # Test connection
+                    info = self.opensearch_client.info()
+                    logger.info(f"Connected to OpenSearch: {info.get('version', {}).get('number', 'unknown')}")
+
+                except Exception as os_error:
+                    logger.error(f"Failed to connect to OpenSearch: {os_error}")
+                    logger.warning("Falling back to in-memory vector store")
+                    self._use_opensearch = False
+
+            # Fallback to in-memory store if OpenSearch not available
+            if not self._use_opensearch:
+                self.vector_store = {}
+                self.document_store = {}
+                logger.info("Using in-memory vector store (fallback mode)")
+
             self._initialized = True
             logger.info("AWS Vector Service initialized successfully")
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize AWS Vector Service: {e}")
             raise
@@ -97,24 +142,63 @@ class AWSVectorService:
         """Add document to vector store"""
         if not self._initialized:
             await self.initialize()
-            
+
         try:
             # Generate embeddings
             embeddings = await self.generate_embeddings(text)
             if not embeddings:
+                logger.error(f"Failed to generate embeddings for document {doc_id}")
                 return False
-            
-            # Store document and embeddings
-            self.vector_store[doc_id] = embeddings
-            self.document_store[doc_id] = {
-                'text': text,
-                'metadata': metadata or {},
-                'created_at': datetime.utcnow().isoformat()
-            }
-            
-            logger.info(f"Added document {doc_id} to vector store")
-            return True
-            
+
+            metadata = metadata or {}
+
+            if self._use_opensearch and self.opensearch_client:
+                try:
+                    # Index document to OpenSearch
+                    document = {
+                        'embedding': embeddings,
+                        'content': text,
+                        'title': metadata.get('title', 'Untitled'),
+                        'source_url': metadata.get('source_url', ''),
+                        'document_type': metadata.get('document_type', 'legal_document'),
+                        'legal_area': metadata.get('legal_area', 'General'),
+                        'court': metadata.get('court'),
+                        'publication_date': metadata.get('publication_date'),
+                        'summary': metadata.get('summary', text[:500]),
+                        'metadata': metadata,
+                        'created_at': datetime.utcnow().isoformat()
+                    }
+
+                    response = self.opensearch_client.index(
+                        index=self.index_name,
+                        id=doc_id,
+                        body=document,
+                        refresh=True  # Make document immediately searchable
+                    )
+
+                    logger.info(f"Indexed document {doc_id} to OpenSearch: {response.get('result', 'unknown')}")
+                    return response.get('result') in ['created', 'updated']
+
+                except Exception as os_error:
+                    logger.error(f"OpenSearch indexing failed for {doc_id}: {os_error}")
+                    # Fall back to in-memory if OpenSearch fails
+                    self._use_opensearch = False
+
+            # Fallback to in-memory storage
+            if not self._use_opensearch:
+                if not hasattr(self, 'vector_store'):
+                    self.vector_store = {}
+                    self.document_store = {}
+
+                self.vector_store[doc_id] = embeddings
+                self.document_store[doc_id] = {
+                    'text': text,
+                    'metadata': metadata,
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                logger.info(f"Added document {doc_id} to in-memory store")
+                return True
+
         except Exception as e:
             logger.error(f"Error adding document {doc_id}: {e}")
             return False
@@ -123,28 +207,93 @@ class AWSVectorService:
         """Search for similar documents"""
         if not self._initialized:
             await self.initialize()
-            
+
         try:
             # Generate query embeddings
             query_embeddings = await self.generate_embeddings(query)
             if not query_embeddings:
+                logger.error("Failed to generate query embeddings")
                 return []
-            
-            # Calculate similarities
-            similarities = []
-            for doc_id, doc_embeddings in self.vector_store.items():
-                similarity = self._cosine_similarity(query_embeddings, doc_embeddings)
-                if similarity >= threshold:
-                    similarities.append({
-                        'doc_id': doc_id,
-                        'similarity': similarity,
-                        'document': self.document_store.get(doc_id, {})
-                    })
-            
-            # Sort by similarity and return top results
-            similarities.sort(key=lambda x: x['similarity'], reverse=True)
-            return similarities[:limit]
-            
+
+            if self._use_opensearch and self.opensearch_client:
+                try:
+                    # Use k-NN search in OpenSearch
+                    search_query = {
+                        "size": limit,
+                        "query": {
+                            "knn": {
+                                "embedding": {
+                                    "vector": query_embeddings,
+                                    "k": limit
+                                }
+                            }
+                        },
+                        "_source": ["title", "content", "source_url", "legal_area", "document_type", "court", "publication_date", "summary", "metadata"]
+                    }
+
+                    response = self.opensearch_client.search(
+                        index=self.index_name,
+                        body=search_query
+                    )
+
+                    # Format results
+                    results = []
+                    for hit in response.get('hits', {}).get('hits', []):
+                        score = hit.get('_score', 0)
+                        # Convert OpenSearch score to similarity (0-1 range)
+                        # k-NN scores are already normalized
+                        similarity = min(score / 2.0, 1.0) if score > 0 else 0
+
+                        if similarity >= threshold:
+                            source = hit.get('_source', {})
+                            results.append({
+                                'doc_id': hit.get('_id'),
+                                'similarity': similarity,
+                                'score': score,
+                                'document': {
+                                    'text': source.get('content', ''),
+                                    'metadata': {
+                                        'title': source.get('title', ''),
+                                        'source_url': source.get('source_url', ''),
+                                        'legal_area': source.get('legal_area', ''),
+                                        'document_type': source.get('document_type', ''),
+                                        'court': source.get('court'),
+                                        'publication_date': source.get('publication_date'),
+                                        'summary': source.get('summary', ''),
+                                        **source.get('metadata', {})
+                                    }
+                                }
+                            })
+
+                    logger.info(f"OpenSearch k-NN search returned {len(results)} results")
+                    return results
+
+                except Exception as os_error:
+                    logger.error(f"OpenSearch search failed: {os_error}")
+                    # Fall back to in-memory search
+                    self._use_opensearch = False
+
+            # Fallback to in-memory similarity search
+            if not self._use_opensearch:
+                if not hasattr(self, 'vector_store'):
+                    logger.warning("No vector store available")
+                    return []
+
+                similarities = []
+                for doc_id, doc_embeddings in self.vector_store.items():
+                    similarity = self._cosine_similarity(query_embeddings, doc_embeddings)
+                    if similarity >= threshold:
+                        similarities.append({
+                            'doc_id': doc_id,
+                            'similarity': similarity,
+                            'document': self.document_store.get(doc_id, {})
+                        })
+
+                # Sort by similarity and return top results
+                similarities.sort(key=lambda x: x['similarity'], reverse=True)
+                logger.info(f"In-memory search returned {len(similarities[:limit])} results")
+                return similarities[:limit]
+
         except Exception as e:
             logger.error(f"Error searching similar documents: {e}")
             return []
@@ -181,16 +330,31 @@ class AWSVectorService:
         """Delete document from vector store"""
         if not self._initialized:
             await self.initialize()
-            
+
         try:
-            if doc_id in self.vector_store:
-                del self.vector_store[doc_id]
-            if doc_id in self.document_store:
-                del self.document_store[doc_id]
-            
-            logger.info(f"Deleted document {doc_id} from vector store")
-            return True
-            
+            if self._use_opensearch and self.opensearch_client:
+                try:
+                    response = self.opensearch_client.delete(
+                        index=self.index_name,
+                        id=doc_id
+                    )
+                    logger.info(f"Deleted document {doc_id} from OpenSearch")
+                    return response.get('result') == 'deleted'
+                except Exception as os_error:
+                    logger.error(f"OpenSearch delete failed: {os_error}")
+                    self._use_opensearch = False
+
+            # Fallback to in-memory delete
+            if not self._use_opensearch:
+                if hasattr(self, 'vector_store') and doc_id in self.vector_store:
+                    del self.vector_store[doc_id]
+                if hasattr(self, 'document_store') and doc_id in self.document_store:
+                    del self.document_store[doc_id]
+                logger.info(f"Deleted document {doc_id} from in-memory store")
+                return True
+
+            return False
+
         except Exception as e:
             logger.error(f"Error deleting document {doc_id}: {e}")
             return False
@@ -199,13 +363,42 @@ class AWSVectorService:
         """Get collection statistics"""
         if not self._initialized:
             await self.initialize()
-            
-        return {
-            'total_documents': len(self.document_store),
-            'total_vectors': len(self.vector_store),
-            'index_name': self.index_name,
-            'service_type': 'AWS-Native Vector Service'
-        }
+
+        try:
+            if self._use_opensearch and self.opensearch_client:
+                try:
+                    count_response = self.opensearch_client.count(index=self.index_name)
+                    stats_response = self.opensearch_client.indices.stats(index=self.index_name)
+
+                    return {
+                        'total_documents': count_response.get('count', 0),
+                        'index_name': self.index_name,
+                        'service_type': 'AWS OpenSearch',
+                        'size_bytes': stats_response.get('_all', {}).get('total', {}).get('store', {}).get('size_in_bytes', 0),
+                        'using_opensearch': True
+                    }
+                except Exception as os_error:
+                    logger.error(f"Failed to get OpenSearch stats: {os_error}")
+                    self._use_opensearch = False
+
+            # Fallback to in-memory stats
+            if not self._use_opensearch:
+                return {
+                    'total_documents': len(getattr(self, 'document_store', {})),
+                    'total_vectors': len(getattr(self, 'vector_store', {})),
+                    'index_name': self.index_name,
+                    'service_type': 'In-Memory Vector Store (Fallback)',
+                    'using_opensearch': False
+                }
+
+        except Exception as e:
+            logger.error(f"Error getting collection stats: {e}")
+            return {
+                'total_documents': 0,
+                'index_name': self.index_name,
+                'service_type': 'Error',
+                'error': str(e)
+            }
 
 # Global instance
 aws_vector_service = AWSVectorService()

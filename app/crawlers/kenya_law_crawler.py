@@ -22,8 +22,19 @@ class KenyaLawCrawler(BaseCrawler):
             'judgments': f"{self.base_url}/judgments/",
             'legislation': f"{self.base_url}/legislation/",
             'gazettes': f"{self.base_url}/gazettes/",
+            'legislation_counties': f"{self.base_url}/legislation/counties",
+            'bills': f"{self.base_url}/bills/",
             'causelists': f"{self.base_url}/causelists/",
-            'publications': f"{self.base_url}/taxonomy/publications/"
+            'publications': f"{self.base_url}/taxonomy/publications/",
+            'superior_courts': f"{self.base_url}/judgments/court-class/superior-courts/",
+            'subordinate_courts': f"{self.base_url}/judgments/court-class/subordinate-courts/",
+            'small_claims_court': f"{self.base_url}/judgments/court-class/small-claims-court/",
+            'civil_human_rights_tribunals': f"{self.base_url}/judgments/court-class/civil-and-human-rights-tribunals/",
+            'commercial_tribunals': f"{self.base_url}/judgments/court-class/commercial-tribunals/",
+            'environment_land_tribunals': f"{self.base_url}/judgments/court-class/environment-and-land-tribunals/",
+            'intellectual_property_tribunals': f"{self.base_url}/judgments/court-class/intellectual-property-tribunals/",
+            'regional_international_courts': f"{self.base_url}/judgments/court-class/regional-and-international-courts/",
+            'tribunals': f"{self.base_url}/judgments/court-class/tribunals/"
         }
         
         # Document type mappings
@@ -551,19 +562,173 @@ class KenyaLawCrawler(BaseCrawler):
     async def get_document_urls(self, limit: int = 100) -> List[str]:
         """Get list of document URLs to crawl"""
         urls = []
-        
+
         try:
             # Get URLs from different sections
             judgment_urls = await self._get_judgment_urls(limit // 3)
             legislation_urls = await self._get_legislation_urls(limit // 3)
             gazette_urls = await self._get_gazette_urls(limit // 3)
-            
+
             urls.extend(judgment_urls)
             urls.extend(legislation_urls)
             urls.extend(gazette_urls)
-            
+
             return list(set(urls))[:limit]
-            
+
         except Exception as e:
             logger.error(f"Error getting document URLs: {e}")
+            return []
+
+    # Additional crawling methods for all Kenya Law sections
+
+    async def crawl_superior_courts(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Crawl superior court judgments"""
+        try:
+            logger.info("Starting superior courts crawling...")
+            urls = await self._get_section_urls('superior_courts', limit)
+
+            results = []
+            for url in urls[:limit]:
+                result = await self.crawl_page(url)
+                if result:
+                    result['document_type'] = 'judgment'
+                    result['metadata']['court'] = 'Superior Court'
+                    results.append(result)
+
+            logger.info(f"Crawled {len(results)} superior court judgments")
+            return results
+        except Exception as e:
+            logger.error(f"Error crawling superior courts: {e}")
+            return []
+
+    async def crawl_subordinate_courts(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Crawl subordinate court judgments"""
+        try:
+            logger.info("Starting subordinate courts crawling...")
+            urls = await self._get_section_urls('subordinate_courts', limit)
+
+            results = []
+            for url in urls[:limit]:
+                result = await self.crawl_page(url)
+                if result:
+                    result['document_type'] = 'judgment'
+                    result['metadata']['court'] = 'Subordinate Court'
+                    results.append(result)
+
+            logger.info(f"Crawled {len(results)} subordinate court judgments")
+            return results
+        except Exception as e:
+            logger.error(f"Error crawling subordinate courts: {e}")
+            return []
+
+    async def crawl_tribunals(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Crawl tribunal decisions"""
+        try:
+            logger.info("Starting tribunals crawling...")
+            urls = await self._get_section_urls('tribunals', limit)
+
+            results = []
+            for url in urls[:limit]:
+                result = await self.crawl_page(url)
+                if result:
+                    result['document_type'] = 'tribunal_decision'
+                    result['metadata']['court'] = 'Tribunal'
+                    results.append(result)
+
+            logger.info(f"Crawled {len(results)} tribunal decisions")
+            return results
+        except Exception as e:
+            logger.error(f"Error crawling tribunals: {e}")
+            return []
+
+    async def crawl_legislation_counties(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Crawl county legislation"""
+        try:
+            logger.info("Starting county legislation crawling...")
+            urls = await self._get_section_urls('legislation_counties', limit)
+
+            results = []
+            for url in urls[:limit]:
+                result = await self.crawl_page(url)
+                if result:
+                    result['document_type'] = 'county_legislation'
+                    results.append(result)
+
+            logger.info(f"Crawled {len(results)} county legislation documents")
+            return results
+        except Exception as e:
+            logger.error(f"Error crawling county legislation: {e}")
+            return []
+
+    async def crawl_bills(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Crawl parliamentary bills"""
+        try:
+            logger.info("Starting bills crawling...")
+            urls = await self._get_section_urls('bills', limit)
+
+            results = []
+            for url in urls[:limit]:
+                result = await self.crawl_page(url)
+                if result:
+                    result['document_type'] = 'bill'
+                    results.append(result)
+
+            logger.info(f"Crawled {len(results)} bills")
+            return results
+        except Exception as e:
+            logger.error(f"Error crawling bills: {e}")
+            return []
+
+    async def crawl_commercial_tribunals(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Crawl commercial tribunal decisions"""
+        try:
+            logger.info("Starting commercial tribunals crawling...")
+            urls = await self._get_section_urls('commercial_tribunals', limit)
+
+            results = []
+            for url in urls[:limit]:
+                result = await self.crawl_page(url)
+                if result:
+                    result['document_type'] = 'tribunal_decision'
+                    result['metadata']['court'] = 'Commercial Tribunal'
+                    results.append(result)
+
+            logger.info(f"Crawled {len(results)} commercial tribunal decisions")
+            return results
+        except Exception as e:
+            logger.error(f"Error crawling commercial tribunals: {e}")
+            return []
+
+    async def _get_section_urls(self, section: str, limit: int) -> List[str]:
+        """Generic method to get URLs from any section"""
+        try:
+            section_url = self.sections.get(section)
+            if not section_url:
+                logger.error(f"Unknown section: {section}")
+                return []
+
+            # Fetch the section page
+            soup = await self._fetch_page(section_url)
+            if not soup:
+                return []
+
+            # Extract document links (adapt based on page structure)
+            urls = []
+            links = soup.find_all('a', href=True)
+
+            for link in links:
+                href = link['href']
+                # Filter for document links (adjust pattern as needed)
+                if any(pattern in href for pattern in ['/view/', '/download/', '/doc/', section]):
+                    full_url = urljoin(self.base_url, href)
+                    if full_url not in urls:
+                        urls.append(full_url)
+                        if len(urls) >= limit:
+                            break
+
+            logger.info(f"Found {len(urls)} URLs in {section}")
+            return urls
+
+        except Exception as e:
+            logger.error(f"Error getting URLs from {section}: {e}")
             return []

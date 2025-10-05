@@ -1303,3 +1303,155 @@ async def get_cache_statistics():
     except Exception as e:
         logger.error(f"Error getting cache statistics: {e}")
         return {"error": str(e)}
+
+# Admin endpoints for crawling and indexing
+
+@router.post("/admin/crawl/trigger")
+async def trigger_crawl(
+    section: str = Query(
+        "judgments",
+        description="Section to crawl",
+        enum=["all", "judgments", "legislation", "gazettes", "bills",
+              "superior-courts", "subordinate-courts", "tribunals",
+              "legislation-counties", "commercial-tribunals"]
+    ),
+    limit: int = Query(100, ge=10, le=1000, description="Maximum documents to crawl")
+):
+    """
+    Trigger manual crawl and indexing for specified section
+
+    Example: POST /api/v1/counsel/admin/crawl/trigger?section=judgments&limit=500
+    """
+    try:
+        from app.services.crawler_service import CrawlerService
+        from app.services.document_indexing_service import document_indexing_service
+
+        # Initialize services
+        await document_indexing_service.initialize()
+        crawler = CrawlerService()
+
+        results = {
+            "section": section,
+            "requested": limit,
+            "crawled": 0,
+            "indexed": 0,
+            "errors": 0,
+            "started_at": datetime.utcnow().isoformat()
+        }
+
+        # Crawl and index based on section
+        if section == "judgments" or section == "all":
+            docs = await crawler.kenya_law_crawler.crawl_judgments(limit=limit)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        if section == "legislation" or section == "all":
+            docs = await crawler.kenya_law_crawler.crawl_legislation(limit=limit)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        if section == "gazettes" or section == "all":
+            docs = await crawler.kenya_law_crawler.crawl_gazettes(limit=limit // 2)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        if section == "bills":
+            docs = await crawler.kenya_law_crawler.crawl_bills(limit=limit)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        if section == "superior-courts":
+            docs = await crawler.kenya_law_crawler.crawl_superior_courts(limit=limit)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        if section == "subordinate-courts":
+            docs = await crawler.kenya_law_crawler.crawl_subordinate_courts(limit=limit)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        if section == "tribunals":
+            docs = await crawler.kenya_law_crawler.crawl_tribunals(limit=limit)
+            results['crawled'] += len(docs)
+
+            for doc in docs:
+                success = await document_indexing_service.index_crawled_document(doc)
+                if success:
+                    results['indexed'] += 1
+                else:
+                    results['errors'] += 1
+
+        results['completed_at'] = datetime.utcnow().isoformat()
+
+        return {
+            "status": "success",
+            "results": results
+        }
+
+    except Exception as e:
+        logger.error(f"Crawl trigger error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/search/stats")
+async def get_search_stats():
+    """
+    Get OpenSearch index statistics
+
+    Example: GET /api/v1/counsel/admin/search/stats
+    """
+    try:
+        from app.services.document_indexing_service import document_indexing_service
+
+        await document_indexing_service.initialize()
+        stats = await document_indexing_service.get_stats()
+
+        return {
+            "status": "success",
+            "stats": stats,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"Search stats error: {e}")
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }

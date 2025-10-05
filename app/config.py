@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIRECTORY: str = os.getenv("CHROMA_PERSIST_DIRECTORY", "./chroma_db")
     EMBEDDING_MODEL: str = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
+    # OpenSearch Configuration
+    OPENSEARCH_ENDPOINT: str = os.getenv("OPENSEARCH_ENDPOINT", "search-legal-docs-ixkq6fclmcvbnm73amird7ctg4.us-east-1.es.amazonaws.com")
+    OPENSEARCH_INDEX: str = os.getenv("OPENSEARCH_INDEX", "kenyan-legal-docs")
+    OPENSEARCH_PORT: int = int(os.getenv("OPENSEARCH_PORT", "443"))
+
     # S3 Conversation Cache
     S3_CONVERSATION_CACHE_BUCKET: str = os.getenv("S3_CONVERSATION_CACHE_BUCKET", "counsel-ai-conversation-cache")
     

@@ -16,6 +16,7 @@ from app.database import SessionLocal
 # DocumentService removed - using direct database operations
 from app.crawlers.kenya_law_crawler import KenyaLawCrawler
 from app.crawlers.parliament_crawler import ParliamentCrawler
+from app.services.document_indexing_service import document_indexing_service
 
 logger = logging.getLogger(__name__)
 
@@ -65,22 +66,45 @@ class CrawlerService:
         while self.is_running:
             try:
                 logger.info("Starting Kenya Law crawling cycle")
-                
-                # Crawl different sections
-                await self.kenya_law_crawler.crawl_judgments()
+
+                # Initialize indexing service
+                await document_indexing_service.initialize()
+
+                # Crawl and index judgments
+                judgments = await self.kenya_law_crawler.crawl_judgments(limit=100)
+                indexed_count = 0
+                for doc in judgments:
+                    success = await document_indexing_service.index_crawled_document(doc)
+                    if success:
+                        indexed_count += 1
+                logger.info(f"Indexed {indexed_count}/{len(judgments)} judgments")
                 await asyncio.sleep(60)  # Wait between sections
-                
-                await self.kenya_law_crawler.crawl_legislation()
+
+                # Crawl and index legislation
+                legislation = await self.kenya_law_crawler.crawl_legislation(limit=100)
+                indexed_count = 0
+                for doc in legislation:
+                    success = await document_indexing_service.index_crawled_document(doc)
+                    if success:
+                        indexed_count += 1
+                logger.info(f"Indexed {indexed_count}/{len(legislation)} legislation")
                 await asyncio.sleep(60)
-                
-                await self.kenya_law_crawler.crawl_gazettes()
+
+                # Crawl and index gazettes
+                gazettes = await self.kenya_law_crawler.crawl_gazettes(limit=50)
+                indexed_count = 0
+                for doc in gazettes:
+                    success = await document_indexing_service.index_crawled_document(doc)
+                    if success:
+                        indexed_count += 1
+                logger.info(f"Indexed {indexed_count}/{len(gazettes)} gazettes")
                 await asyncio.sleep(60)
-                
+
                 logger.info("Kenya Law crawling cycle completed")
-                
+
                 # Wait 24 hours before next cycle
                 await asyncio.sleep(24 * 60 * 60)
-                
+
             except asyncio.CancelledError:
                 logger.info("Kenya Law crawling cancelled")
                 break
@@ -93,18 +117,35 @@ class CrawlerService:
         while self.is_running:
             try:
                 logger.info("Starting Parliament crawling cycle")
-                
-                await self.parliament_crawler.crawl_hansard()
+
+                # Initialize indexing service
+                await document_indexing_service.initialize()
+
+                # Crawl and index hansard
+                hansard_docs = await self.parliament_crawler.crawl_hansard(limit=50)
+                indexed_count = 0
+                for doc in hansard_docs:
+                    success = await document_indexing_service.index_crawled_document(doc)
+                    if success:
+                        indexed_count += 1
+                logger.info(f"Indexed {indexed_count}/{len(hansard_docs)} hansard documents")
                 await asyncio.sleep(60)
-                
-                await self.parliament_crawler.crawl_bills()
+
+                # Crawl and index bills
+                bills = await self.parliament_crawler.crawl_bills(limit=50)
+                indexed_count = 0
+                for doc in bills:
+                    success = await document_indexing_service.index_crawled_document(doc)
+                    if success:
+                        indexed_count += 1
+                logger.info(f"Indexed {indexed_count}/{len(bills)} bills")
                 await asyncio.sleep(60)
-                
+
                 logger.info("Parliament crawling cycle completed")
-                
+
                 # Wait 24 hours before next cycle
                 await asyncio.sleep(24 * 60 * 60)
-                
+
             except asyncio.CancelledError:
                 logger.info("Parliament crawling cancelled")
                 break
